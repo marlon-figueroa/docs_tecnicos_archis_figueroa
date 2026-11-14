@@ -74,12 +74,42 @@ body,
 .visor-arc42.modal-box {
   display: flex;
   flex-direction: column;
-  width: min(96vw, 80rem);
-  max-width: none;
-  height: min(92vh, 60rem);
-  max-height: none;
+  width: min(98vw, 112rem);
+  max-width: 98vw;
+  height: 96vh;
+  max-height: 96vh;
   padding: 0;
   overflow: hidden;
+  border-radius: var(--rounded-box, 1rem);
+}
+
+/* Visor PDF: casi pantalla completa para leer cómodamente */
+.visor-pdf.modal-box {
+  display: flex;
+  flex-direction: column;
+  width: min(98vw, 112rem);
+  max-width: 98vw;
+  height: 96vh;
+  max-height: 96vh;
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--rounded-box, 1rem);
+}
+
+.visor-pdf .visor-pdf-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.visor-pdf-frame {
+  display: block;
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  border: 0;
+  background: #fff;
 }
 
 .joint-host {

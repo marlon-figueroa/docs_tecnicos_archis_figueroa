@@ -1,6 +1,7 @@
 import {
   AlertTriangle,
   Check,
+  ClipboardList,
   Cloud,
   Lightbulb,
   Puzzle,
@@ -9,12 +10,45 @@ import {
 } from 'lucide-react'
 import { ProviderBadge } from './ui'
 
+export type RevisionFormulario = {
+  id: string
+  paso: number
+  nivel: 'faltante' | 'incompleto' | 'contenido'
+  mensaje: string
+}
+
 export type SugerenciasPreview = {
   patrones: { id: string; nombre: string; cuando?: string; [key: string]: unknown }[]
   antipatrones: { id: string; nombre: string; remediacion?: string; [key: string]: unknown }[]
   servicios: { id: string; nombre: string; descripcion?: string; capacidad?: string; proveedor?: string }[]
   motivos: { reglaId: string; motivo: string }[]
+  revisiones: RevisionFormulario[]
 }
+
+export type FusionPendiente = {
+  patrones: SugerenciasPreview['patrones']
+  antipatrones: SugerenciasPreview['antipatrones']
+  servicios: SugerenciasPreview['servicios']
+}
+
+export type FeedbackAplicarCatalogo = {
+  patrones: number
+  antipatrones: number
+  servicios: number
+  sinCambios: boolean
+}
+
+const PASO_NOMBRES = [
+  'Proyecto y metas',
+  'Restricciones y contexto',
+  'Escenarios de calidad',
+  'Estrategia y bloques',
+  'Ejecución y despliegue',
+  'Nube',
+  'Patrones',
+  'Well-Architected',
+  'ADRs y riesgos',
+] as const
 
 const CAP_LABELS: Record<string, string> = {
   compute: 'Cómputo',
@@ -26,12 +60,59 @@ const CAP_LABELS: Record<string, string> = {
   observabilidad: 'Observabilidad',
 }
 
+function badgeNivel(nivel: RevisionFormulario['nivel']) {
+  if (nivel === 'faltante') return 'badge-error'
+  if (nivel === 'incompleto') return 'badge-warning'
+  return 'badge-warning badge-outline'
+}
+
+function labelNivel(nivel: RevisionFormulario['nivel']) {
+  if (nivel === 'faltante') return 'Faltante'
+  if (nivel === 'incompleto') return 'Incompleto'
+  return 'Contenido'
+}
+
+export function StepRevisionAlert({
+  items,
+  onOpenPanel,
+}: {
+  items: RevisionFormulario[]
+  onOpenPanel?: () => void
+}) {
+  if (items.length === 0) return null
+
+  return (
+    <div className="alert alert-warning border-warning/40 bg-warning/15 text-base-content mb-4 text-sm" role="status">
+      <ClipboardList className="size-5 shrink-0" aria-hidden />
+      <div className="min-w-0 flex-1">
+        <p className="font-medium">Revisión de este paso ({items.length})</p>
+        <ul className="mt-2 space-y-1 list-disc list-inside text-base-content/80">
+          {items.slice(0, 4).map((r) => (
+            <li key={r.id}>{r.mensaje}</li>
+          ))}
+        </ul>
+        {items.length > 4 ? (
+          <p className="text-xs text-base-content/60 mt-1">Y {items.length - 4} aviso(s) más en Sugerencias.</p>
+        ) : null}
+        {onOpenPanel ? (
+          <button type="button" className="btn btn-ghost btn-xs mt-2 gap-1" onClick={onOpenPanel}>
+            <Sparkles className="size-3" aria-hidden />
+            Ver todas las sugerencias
+          </button>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
 export function SuggestionsPanel({
   open,
   onClose,
   sugerencias,
   proveedor,
   perfilActivo,
+  fusionPendiente,
+  feedbackAplicar,
   onApply,
   onGoStep,
 }: {
@@ -40,14 +121,30 @@ export function SuggestionsPanel({
   sugerencias: SugerenciasPreview
   proveedor: string
   perfilActivo: { label: string }[]
+  fusionPendiente: FusionPendiente
+  feedbackAplicar: FeedbackAplicarCatalogo | null
   onApply: () => void
   onGoStep: (step: number) => void
 }) {
   if (!open) return null
 
-  const total =
+  const revisiones = sugerencias.revisiones || []
+  const revisionesPorPaso = PASO_NOMBRES.map((nombre, paso) => ({
+    paso,
+    nombre,
+    items: revisiones.filter((r) => r.paso === paso),
+  })).filter((g) => g.items.length > 0)
+
+  const catalogoSugerido =
     sugerencias.patrones.length + sugerencias.antipatrones.length + sugerencias.servicios.length
-  const vacio = total === 0 && sugerencias.motivos.length === 0
+  const catalogoPendiente =
+    fusionPendiente.patrones.length + fusionPendiente.antipatrones.length + fusionPendiente.servicios.length
+  const totalPanel = catalogoSugerido + revisiones.length
+  const vacioCatalogo =
+    sugerencias.patrones.length === 0 &&
+    sugerencias.antipatrones.length === 0 &&
+    sugerencias.servicios.length === 0 &&
+    sugerencias.motivos.length === 0
 
   return (
     <>
@@ -66,13 +163,13 @@ export function SuggestionsPanel({
             <div className="min-w-0">
               <p className="text-[11px] font-bold uppercase tracking-widest text-primary/90 flex items-center gap-1.5">
                 <Sparkles className="size-3.5" aria-hidden />
-                Motor de reglas
+                Asistente de diseño
               </p>
               <h2 id="sugerencias-panel-title" className="text-lg font-semibold mt-1">
                 Sugerencias de arquitectura
               </h2>
               <p className="text-xs text-base-content/65 mt-1 leading-relaxed">
-                Recomendaciones según el perfil de negocio y el proveedor{' '}
+                Revisa formularios, perfil de negocio y catálogo para{' '}
                 <ProviderBadge proveedor={proveedor} />.
               </p>
             </div>
@@ -89,14 +186,50 @@ export function SuggestionsPanel({
               Cómo funciona
             </h3>
             <p className="text-sm text-base-content/75 leading-relaxed">
-              Las reglas del catálogo comparan tu <strong>perfil de negocio</strong> (paso 2) con patrones,
-              antipatrones y servicios de nube. Puedes revisar la propuesta aquí y aplicarla al JSON sin perder
-              decisiones ya marcadas como adoptadas.
+              En cada cambio del documento se analizan los <strong>formularios</strong> (completitud y calidad del
+              texto) y las <strong>reglas del catálogo</strong> según el perfil de negocio. Puedes aplicar patrones y
+              servicios al JSON sin perder decisiones ya marcadas como adoptadas o mitigadas.
             </p>
-            <button type="button" className="btn btn-ghost btn-xs mt-2" onClick={() => onGoStep(1)}>
-              Ajustar perfil de negocio
-            </button>
           </section>
+
+          {revisionesPorPaso.length > 0 ? (
+            <section>
+              <h3 className="text-xs font-bold uppercase tracking-wide text-base-content/55 mb-2 flex items-center gap-2">
+                <ClipboardList className="size-3.5 text-primary" aria-hidden />
+                Revisión del formulario ({revisiones.length})
+              </h3>
+              <div className="space-y-3">
+                {revisionesPorPaso.map(({ paso, nombre, items }) => (
+                  <article
+                    key={paso}
+                    className="rounded-xl border border-warning/35 bg-warning/10 overflow-hidden"
+                  >
+                    <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-warning/25 bg-warning/20">
+                      <p className="text-sm font-medium">
+                        Paso {paso + 1}: {nombre}
+                      </p>
+                      <button type="button" className="btn btn-ghost btn-xs" onClick={() => onGoStep(paso)}>
+                        Ir
+                      </button>
+                    </div>
+                    <ul className="divide-y divide-warning/20">
+                      {items.map((r) => (
+                        <li key={r.id} className="px-3 py-2 text-sm leading-snug bg-warning/5">
+                          <span className={`badge badge-xs mr-2 ${badgeNivel(r.nivel)}`}>{labelNivel(r.nivel)}</span>
+                          {r.mensaje}
+                        </li>
+                      ))}
+                    </ul>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : (
+            <div className="alert alert-success text-sm py-3">
+              <Check className="size-5 shrink-0" aria-hidden />
+              <span>Los pasos revisados no muestran avisos de completitud por ahora.</span>
+            </div>
+          )}
 
           <section>
             <h3 className="text-xs font-bold uppercase tracking-wide text-base-content/55 mb-2">Perfil activo</h3>
@@ -113,6 +246,9 @@ export function SuggestionsPanel({
                 ))}
               </div>
             )}
+            <button type="button" className="btn btn-ghost btn-xs mt-2" onClick={() => onGoStep(1)}>
+              Ajustar perfil de negocio
+            </button>
           </section>
 
           {sugerencias.motivos.length > 0 ? (
@@ -129,10 +265,49 @@ export function SuggestionsPanel({
             </section>
           ) : null}
 
-          {vacio ? (
+          {vacioCatalogo ? (
             <div className="alert alert-info text-sm">
               <Lightbulb className="size-5 shrink-0" />
               <span>Sin coincidencias con el catálogo actual. Prueba activar más rasgos o cambiar proveedor.</span>
+            </div>
+          ) : null}
+
+          {catalogoPendiente > 0 ? (
+            <section className="rounded-xl border border-primary/30 bg-primary/5 p-4">
+              <h3 className="text-xs font-bold uppercase tracking-wide text-primary mb-2">Se añadirá al documento</h3>
+              <p className="text-sm text-base-content/75 mb-2">
+                {fusionPendiente.patrones.length > 0
+                  ? `${fusionPendiente.patrones.length} patrón(es)`
+                  : null}
+                {fusionPendiente.patrones.length > 0 && fusionPendiente.antipatrones.length > 0 ? ', ' : null}
+                {fusionPendiente.antipatrones.length > 0
+                  ? `${fusionPendiente.antipatrones.length} antipatrón(es)`
+                  : null}
+                {(fusionPendiente.patrones.length > 0 || fusionPendiente.antipatrones.length > 0) &&
+                fusionPendiente.servicios.length > 0
+                  ? ', '
+                  : null}
+                {fusionPendiente.servicios.length > 0
+                  ? `${fusionPendiente.servicios.length} servicio(s) en la nube`
+                  : null}
+                .
+              </p>
+              <ul className="text-xs text-base-content/65 space-y-1 max-h-32 overflow-y-auto">
+                {fusionPendiente.patrones.map((p) => (
+                  <li key={p.id}>+ {p.nombre}</li>
+                ))}
+                {fusionPendiente.antipatrones.map((a) => (
+                  <li key={a.id}>+ {a.nombre} (advertencia)</li>
+                ))}
+                {fusionPendiente.servicios.map((s) => (
+                  <li key={s.id}>+ {s.nombre}</li>
+                ))}
+              </ul>
+            </section>
+          ) : catalogoSugerido > 0 ? (
+            <div className="alert alert-success text-sm py-3">
+              <Check className="size-5 shrink-0" aria-hidden />
+              <span>Patrones, antipatrones y servicios del catálogo ya están en el documento.</span>
             </div>
           ) : null}
 
@@ -208,13 +383,33 @@ export function SuggestionsPanel({
         </div>
 
         <footer className="shrink-0 border-t border-base-200 p-4 bg-base-100 flex flex-col gap-2">
-          <button type="button" className="btn btn-primary w-full gap-2" onClick={onApply}>
+          {feedbackAplicar?.sinCambios ? (
+            <div className="alert alert-warning text-sm py-2 mb-1">
+              <AlertTriangle className="size-4 shrink-0" aria-hidden />
+              <span>
+                No había elementos nuevos del catálogo (ya fusionados o sin reglas activas). Las{' '}
+                <strong>revisiones del formulario</strong> se corrigen editando cada paso; este botón no las reduce.
+              </span>
+            </div>
+          ) : null}
+          <button
+            type="button"
+            className="btn btn-primary w-full gap-2"
+            onClick={onApply}
+            disabled={catalogoPendiente === 0}
+            title={
+              catalogoPendiente === 0
+                ? 'No hay patrones, antipatrones ni servicios nuevos por fusionar'
+                : undefined
+            }
+          >
             <Check className="size-4" aria-hidden />
-            Aplicar sugerencias al documento
+            Aplicar catálogo al documento
           </button>
           <p className="text-[11px] text-center text-base-content/50 leading-snug">
-            Añade patrones, advertencias y servicios compatibles con {proveedor.toUpperCase()}. No reemplaza estados
-            «adoptado» ni «mitigado».
+            Solo fusiona patrones, advertencias y servicios ({catalogoPendiente} pendiente(s) de{' '}
+            {catalogoSugerido} sugerido(s)). No reemplaza «adoptado» ni «mitigado». Las revisiones del formulario (
+            {revisiones.length}) requieren editar cada paso ({totalPanel} ítems visibles en el panel).
           </p>
         </footer>
       </aside>

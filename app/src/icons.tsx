@@ -18,6 +18,7 @@ import {
   FileUp,
   Gauge,
   Landmark,
+  LayoutDashboard,
   Layers,
   Loader2,
   Menu,
@@ -62,6 +63,7 @@ export const STEP_ICONS: LucideIcon[] = [
   TriangleAlert,
   Network,
   BadgeCheck,
+  LayoutDashboard,
 ]
 
 export {
@@ -79,6 +81,7 @@ export {
   FileText,
   FileUp,
   Layers,
+  LayoutDashboard,
   Loader2,
   Menu,
   Plus,

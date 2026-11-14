@@ -24,7 +24,6 @@ import {
   CircleCheck,
   CircleDollarSign,
   Eye,
-  FileDown,
   FileText,
   FileUp,
   Icon,
@@ -43,8 +42,17 @@ import { aplicarSugerencias, sugerirParaDocumento } from '@nucleo/sugerir.js'
 import { inicializarEvaluacion, resumenEvaluacion } from '@nucleo/evaluar-waf.js'
 import { validarDocumento } from '@nucleo/validar.js'
 import { renderArc42Markdown } from '@nucleo/render-arc42.js'
+import { renderConsolidadoHtml } from '@nucleo/consolidado.js'
 import { renderPresupuestoMarkdown } from '@nucleo/presupuesto.js'
-import { SuggestionsPanel, type SugerenciasPreview } from './SuggestionsPanel'
+import {
+  StepRevisionAlert,
+  SuggestionsPanel,
+  type FeedbackAplicarCatalogo,
+  type SugerenciasPreview,
+} from './SuggestionsPanel'
+import { ControlDashboard, type EvalResumenDashboard } from './ControlDashboard'
+import { PdfPreviewModal } from './PdfPreviewModal'
+import { downloadBlob } from './downloadStyledPdf'
 
 const Arc42Preview = lazy(() => import('./Arc42Preview').then((m) => ({ default: m.Arc42Preview })))
 
@@ -62,6 +70,7 @@ const PASOS = [
   'Decisiones y riesgos',
   'Diagrama de arquitectura',
   'Validación y exportación',
+  'Tablero de control',
 ]
 
 const ArchitectureDiagram = lazy(() =>
@@ -232,11 +241,18 @@ export default function App() {
     return d
   })
   const [sugerenciasPanelOpen, setSugerenciasPanelOpen] = useState(false)
+  const [feedbackAplicar, setFeedbackAplicar] = useState<FeedbackAplicarCatalogo | null>(null)
   const [pendienteEliminar, setPendienteEliminar] = useState<
     { tipo: 'escenario' | 'adr' | 'riesgo'; idx: number } | null
   >(null)
-  const [exportandoPdf, setExportandoPdf] = useState(false)
-  const [exportandoPresupuesto, setExportandoPresupuesto] = useState(false)
+  const [pdfVisorOpen, setPdfVisorOpen] = useState(false)
+  const [pdfVisorKind, setPdfVisorKind] = useState<'arc42' | 'presupuesto' | 'consolidado' | null>(null)
+  const [pdfVisorUrl, setPdfVisorUrl] = useState<string | null>(null)
+  const [pdfVisorFilename, setPdfVisorFilename] = useState('')
+  const [pdfVisorLoading, setPdfVisorLoading] = useState(false)
+  const [pdfVisorError, setPdfVisorError] = useState<string | null>(null)
+  const pdfBlobRef = useRef<Blob | null>(null)
+  const pdfUrlRef = useRef<string | null>(null)
   const [confirmarReinicio, setConfirmarReinicio] = useState(false)
   const [visorArc42, setVisorArc42] = useState(false)
   const archivoJson = useRef<HTMLInputElement>(null)
@@ -248,7 +264,17 @@ export default function App() {
     [doc.contextoNegocio]
   )
 
-  const sugerenciasTotal = sugerencias.patrones.length + sugerencias.antipatrones.length + sugerencias.servicios.length
+  const sugerenciasPreview = sugerencias as SugerenciasPreview
+  const sugerenciasTotal =
+    sugerenciasPreview.patrones.length +
+    sugerenciasPreview.antipatrones.length +
+    sugerenciasPreview.servicios.length +
+    (sugerenciasPreview.revisiones?.length || 0)
+
+  const revisionesPaso = useMemo(
+    () => (sugerenciasPreview.revisiones || []).filter((r) => r.paso === step),
+    [sugerenciasPreview.revisiones, step],
+  )
 
   const validation = useMemo(() => validarDocumento(doc), [doc])
   const preview = useMemo(() => renderArc42Markdown(doc), [doc])
@@ -264,6 +290,21 @@ export default function App() {
   const evalResumen = useMemo(() => resumenEvaluacion(doc), [doc])
 
   const proveedor = doc.meta?.proveedorNube || 'aws'
+  const fusionPendiente = useMemo(
+    () => {
+      const patIds = new Set((doc.patrones || []).map((p: { id: string }) => p.id))
+      const antiIds = new Set((doc.antipatrones || []).map((a: { id: string }) => a.id))
+      const svcIds = new Set(doc.nube?.serviciosSeleccionados || [])
+      return {
+        patrones: sugerenciasPreview.patrones.filter((p) => !patIds.has(p.id)),
+        antipatrones: sugerenciasPreview.antipatrones.filter((a) => !antiIds.has(a.id)),
+        servicios: sugerenciasPreview.servicios.filter(
+          (s) => (proveedor === 'hibrido' || s.proveedor === proveedor) && !svcIds.has(s.id),
+        ),
+      }
+    },
+    [doc.patrones, doc.antipatrones, doc.nube?.serviciosSeleccionados, sugerenciasPreview, proveedor],
+  )
   const servicios = useMemo(() => serviciosPorProveedor(proveedor), [proveedor])
   const serviciosPorCapacidad = useMemo(() => {
     const map = new Map<string, typeof servicios>()
@@ -295,6 +336,12 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [visorArc42])
 
+  useEffect(() => {
+    if (!feedbackAplicar || sugerenciasPanelOpen) return
+    const t = window.setTimeout(() => setFeedbackAplicar(null), 12_000)
+    return () => window.clearTimeout(t)
+  }, [feedbackAplicar, sugerenciasPanelOpen])
+
   const patch = useCallback((fn: (d: Doc) => void) => {
     setDoc((prev: Doc) => {
       const next = structuredClone(prev)
@@ -313,9 +360,19 @@ export default function App() {
   }
 
   const aplicarSugerenciasClick = () => {
-    const { documento } = aplicarSugerencias(structuredClone(doc))
+    const { documento, aplicado } = aplicarSugerencias(structuredClone(doc))
     setDoc(documento)
-    setSugerenciasPanelOpen(false)
+    const patrones = aplicado.patrones.length
+    const antipatrones = aplicado.antipatrones.length
+    const serviciosNuevos = aplicado.servicios.length
+    const sinCambios = patrones + antipatrones + serviciosNuevos === 0
+    setFeedbackAplicar({ patrones, antipatrones, servicios: serviciosNuevos, sinCambios })
+    if (!sinCambios) setSugerenciasPanelOpen(false)
+  }
+
+  const abrirPanelSugerencias = () => {
+    setFeedbackAplicar(null)
+    setSugerenciasPanelOpen(true)
   }
 
   const irAPaso = (idx: number) => {
@@ -362,33 +419,60 @@ export default function App() {
     })
   }
 
-  const descargarPdfArc42 = useCallback(async () => {
-    setExportandoPdf(true)
-    try {
-      const titulo = doc.meta?.nombreProyecto?.trim() || 'arquitectura'
-      const { exportArc42Pdf } = await import('./arc42DocumentExport')
-      await exportArc42Pdf(titulo, preview, doc.meta?.fecha)
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'No se pudo generar el PDF.'
-      window.alert(msg)
-    } finally {
-      setExportandoPdf(false)
+  const revokePdfObjectUrl = useCallback(() => {
+    if (pdfUrlRef.current) {
+      URL.revokeObjectURL(pdfUrlRef.current)
+      pdfUrlRef.current = null
     }
-  }, [doc.meta?.fecha, doc.meta?.nombreProyecto, preview])
+    pdfBlobRef.current = null
+    setPdfVisorUrl(null)
+  }, [])
 
-  const descargarPdfPresupuesto = useCallback(async () => {
-    setExportandoPresupuesto(true)
-    try {
-      const titulo = doc.meta?.nombreProyecto?.trim() || 'presupuesto'
-      const { exportPresupuestoPdf } = await import('./arc42DocumentExport')
-      await exportPresupuestoPdf(titulo, renderPresupuestoMarkdown(doc), doc.meta?.fecha)
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'No se pudo generar el PDF del presupuesto.'
-      window.alert(msg)
-    } finally {
-      setExportandoPresupuesto(false)
-    }
-  }, [doc])
+  const cerrarPdfVisor = useCallback(() => {
+    revokePdfObjectUrl()
+    setPdfVisorOpen(false)
+    setPdfVisorKind(null)
+    setPdfVisorLoading(false)
+    setPdfVisorError(null)
+    setPdfVisorFilename('')
+  }, [revokePdfObjectUrl])
+
+  useEffect(() => () => revokePdfObjectUrl(), [revokePdfObjectUrl])
+
+  const abrirPdfVisor = useCallback(
+    async (kind: 'arc42' | 'presupuesto' | 'consolidado') => {
+      revokePdfObjectUrl()
+      setPdfVisorOpen(true)
+      setPdfVisorKind(kind)
+      setPdfVisorLoading(true)
+      setPdfVisorError(null)
+      setPdfVisorFilename('')
+      try {
+        const titulo =
+          doc.meta?.nombreProyecto?.trim() ||
+          (kind === 'arc42' ? 'arquitectura' : kind === 'presupuesto' ? 'presupuesto' : 'consolidado')
+        const { buildArc42PdfBlob, buildConsolidadoPdfBlob, buildPresupuestoPdfBlob } = await import(
+          './arc42DocumentExport'
+        )
+        const { blob, filename } =
+          kind === 'arc42'
+            ? await buildArc42PdfBlob(titulo, preview, doc.meta?.fecha)
+            : kind === 'presupuesto'
+              ? await buildPresupuestoPdfBlob(titulo, renderPresupuestoMarkdown(doc), doc.meta?.fecha)
+              : await buildConsolidadoPdfBlob(titulo, renderConsolidadoHtml(doc), doc.meta?.fecha)
+        const url = URL.createObjectURL(blob)
+        pdfBlobRef.current = blob
+        pdfUrlRef.current = url
+        setPdfVisorUrl(url)
+        setPdfVisorFilename(filename)
+      } catch (e) {
+        setPdfVisorError(e instanceof Error ? e.message : 'No se pudo generar el PDF.')
+      } finally {
+        setPdfVisorLoading(false)
+      }
+    },
+    [doc, preview, revokePdfObjectUrl],
+  )
 
   return (
     <div className="drawer lg:drawer-open min-h-screen">
@@ -439,7 +523,13 @@ export default function App() {
             <button
               type="button"
               className="btn btn-sm btn-primary gap-1.5"
-              onClick={() => setSugerenciasPanelOpen((v) => !v)}
+              onClick={() => {
+                setSugerenciasPanelOpen((v) => {
+                  if (v) return false
+                  setFeedbackAplicar(null)
+                  return true
+                })
+              }}
             >
               <Icon icon={Sparkles} />
               Sugerencias
@@ -455,6 +545,12 @@ export default function App() {
         <main className="shrink-0 py-4 md:py-8 pb-6 w-full max-w-full px-4 sm:px-6 lg:px-10 xl:px-12 min-w-0">
           <div className="card bg-base-100 shadow-sm border border-base-300">
             <div className="card-body gap-0 p-6 md:p-8 flex flex-col min-w-0">
+            {step <= 8 ? (
+              <StepRevisionAlert
+                items={revisionesPaso}
+                onOpenPanel={abrirPanelSugerencias}
+              />
+            ) : null}
             {step === 0 && (
               <FormStack>
                 <PasoHeader
@@ -1069,8 +1165,8 @@ export default function App() {
                       Exportar
                     </h3>
                     <p className="mt-1 text-sm leading-relaxed text-base-content/65">
-                      El JSON es la línea base. El Markdown y el PDF recogen el documento arc42; el presupuesto agrupa
-                      los servicios de nube seleccionados.
+                      El JSON es la línea base. Markdown descarga texto; los PDF de arc42 y presupuesto se abren en
+                      visor con opción de descarga.
                     </p>
                     <div className="mt-4 grid gap-2 sm:grid-cols-2">
                       <button
@@ -1084,15 +1180,15 @@ export default function App() {
                       <button
                         type="button"
                         className="btn btn-primary w-full gap-2"
-                        disabled={exportandoPresupuesto}
-                        onClick={() => void descargarPdfPresupuesto()}
+                        disabled={pdfVisorLoading && pdfVisorKind === 'presupuesto'}
+                        onClick={() => void abrirPdfVisor('presupuesto')}
                       >
-                        {exportandoPresupuesto ? (
+                        {pdfVisorLoading && pdfVisorKind === 'presupuesto' ? (
                           <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
                         ) : (
                           <CircleDollarSign className="size-4 shrink-0" aria-hidden />
                         )}
-                        {exportandoPresupuesto ? 'Generando…' : 'Presupuesto'}
+                        {pdfVisorLoading && pdfVisorKind === 'presupuesto' ? 'Generando…' : 'Ver presupuesto (PDF)'}
                       </button>
                       <button
                         type="button"
@@ -1105,15 +1201,15 @@ export default function App() {
                       <button
                         type="button"
                         className="btn w-full gap-2"
-                        disabled={exportandoPdf}
-                        onClick={() => void descargarPdfArc42()}
+                        disabled={pdfVisorLoading && pdfVisorKind === 'arc42'}
+                        onClick={() => void abrirPdfVisor('arc42')}
                       >
-                        {exportandoPdf ? (
+                        {pdfVisorLoading && pdfVisorKind === 'arc42' ? (
                           <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
                         ) : (
-                          <FileDown className="size-4 shrink-0" aria-hidden />
+                          <Eye className="size-4 shrink-0" aria-hidden />
                         )}
-                        {exportandoPdf ? 'Generando…' : 'PDF arc42'}
+                        {pdfVisorLoading && pdfVisorKind === 'arc42' ? 'Generando…' : 'Ver PDF arc42'}
                       </button>
                     </div>
                   </section>
@@ -1136,10 +1232,41 @@ export default function App() {
                     </button>
                   </section>
                 </div>
-                <button type="button" className="btn btn-ghost btn-sm self-start gap-2" onClick={() => setStep(0)}>
-                  <RotateCcw className="size-4 shrink-0" aria-hidden />
-                  Volver al inicio para ajustes
-                </button>
+                <div className="flex flex-wrap gap-2 self-start">
+                  <button type="button" className="btn btn-ghost btn-sm gap-2" onClick={() => setStep(0)}>
+                    <RotateCcw className="size-4 shrink-0" aria-hidden />
+                    Volver al inicio
+                  </button>
+                  <button type="button" className="btn btn-primary btn-sm gap-2" onClick={() => setStep(11)}>
+                    Ver tablero de control
+                    <ChevronRight className="size-4 shrink-0" aria-hidden />
+                  </button>
+                </div>
+              </FormStack>
+            )}
+
+            {step === 11 && (
+              <FormStack>
+                <PasoHeader
+                  stepIndex={11}
+                  icon={STEP_ICONS[11]}
+                  title="Tablero de control"
+                  desc="Vista consolidada del proyecto. «Ver consolidado (PDF)» abre un visor a pantalla casi completa con opción de descarga."
+                />
+                <ControlDashboard
+                  doc={doc}
+                  validation={validation}
+                  evalResumen={evalResumen as EvalResumenDashboard}
+                  sugerenciasTotal={sugerenciasTotal}
+                  revisionesCount={sugerenciasPreview.revisiones?.length || 0}
+                  perfilLabels={perfilActivo.map((p) => p.label)}
+                  proveedor={proveedor}
+                  onGoStep={setStep}
+                  onOpenSugerencias={abrirPanelSugerencias}
+                  onOpenVisor={() => setVisorArc42(true)}
+                  onVerConsolidadoPdf={() => void abrirPdfVisor('consolidado')}
+                  generandoConsolidadoPdf={pdfVisorLoading && pdfVisorKind === 'consolidado'}
+                />
               </FormStack>
             )}
             </div>
@@ -1336,7 +1463,7 @@ export default function App() {
           </form>
         </dialog>
       ) : null}
-      {visorArc42 && step === 10 ? (
+      {visorArc42 ? (
         <dialog
           className="modal modal-open"
           aria-labelledby="visor-arc42-titulo"
@@ -1384,6 +1511,25 @@ export default function App() {
           </form>
         </dialog>
       ) : null}
+      <PdfPreviewModal
+        open={pdfVisorOpen}
+        onClose={cerrarPdfVisor}
+        title={
+          pdfVisorKind === 'presupuesto'
+            ? 'Presupuesto (PDF)'
+            : pdfVisorKind === 'consolidado'
+              ? 'Tablero de control (PDF)'
+              : 'PDF arc42'
+        }
+        subtitle={doc.meta?.nombreProyecto?.trim() || undefined}
+        filename={pdfVisorFilename || 'documento.pdf'}
+        url={pdfVisorUrl}
+        loading={pdfVisorLoading}
+        error={pdfVisorError}
+        onDownload={() => {
+          if (pdfBlobRef.current && pdfVisorFilename) downloadBlob(pdfBlobRef.current, pdfVisorFilename)
+        }}
+      />
       {confirmarReinicio ? (
         <dialog
           className="modal modal-open"
@@ -1416,12 +1562,70 @@ export default function App() {
           </form>
         </dialog>
       ) : null}
+      {feedbackAplicar && !sugerenciasPanelOpen ? (
+        <div
+          role="status"
+          className={`fixed bottom-4 left-4 right-4 z-[60] mx-auto max-w-lg shadow-xl alert no-print ${
+            feedbackAplicar.sinCambios ? 'alert-warning' : 'alert-success'
+          }`}
+        >
+          {feedbackAplicar.sinCambios ? (
+            <CircleAlert className="size-6 shrink-0" aria-hidden />
+          ) : (
+            <CircleCheck className="size-6 shrink-0" aria-hidden />
+          )}
+          <div className="min-w-0 flex-1 text-sm">
+            {feedbackAplicar.sinCambios ? (
+              <p>
+                No había elementos nuevos del catálogo. Las revisiones del formulario se corrigen en cada paso; el
+                contador de Sugerencias puede seguir alto por esos avisos.
+              </p>
+            ) : (
+              <p>
+                Catálogo fusionado:{' '}
+                {[
+                  feedbackAplicar.patrones > 0 ? `${feedbackAplicar.patrones} patrón(es)` : null,
+                  feedbackAplicar.antipatrones > 0 ? `${feedbackAplicar.antipatrones} antipatrón(es)` : null,
+                  feedbackAplicar.servicios > 0 ? `${feedbackAplicar.servicios} servicio(s)` : null,
+                ]
+                  .filter(Boolean)
+                  .join(', ')}
+                .
+              </p>
+            )}
+            {!feedbackAplicar.sinCambios ? (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {feedbackAplicar.servicios > 0 ? (
+                  <button type="button" className="btn btn-xs btn-primary" onClick={() => setStep(5)}>
+                    Ir a Nube
+                  </button>
+                ) : null}
+                {feedbackAplicar.patrones > 0 || feedbackAplicar.antipatrones > 0 ? (
+                  <button type="button" className="btn btn-xs btn-primary" onClick={() => setStep(6)}>
+                    Ir a Patrones
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost btn-circle shrink-0"
+            aria-label="Cerrar aviso"
+            onClick={() => setFeedbackAplicar(null)}
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+      ) : null}
       <SuggestionsPanel
         open={sugerenciasPanelOpen}
         onClose={() => setSugerenciasPanelOpen(false)}
-        sugerencias={sugerencias as SugerenciasPreview}
+        sugerencias={sugerenciasPreview}
         proveedor={proveedor}
         perfilActivo={perfilActivo}
+        fusionPendiente={fusionPendiente}
+        feedbackAplicar={feedbackAplicar}
         onApply={aplicarSugerenciasClick}
         onGoStep={irAPaso}
       />

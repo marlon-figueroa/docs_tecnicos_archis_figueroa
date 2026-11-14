@@ -1,4 +1,4 @@
-import { downloadStyledPdf, pdfFilename } from './downloadStyledPdf'
+import { downloadBlob, generateStyledPdfBlob, pdfFilename } from './downloadStyledPdf'
 import { loadMermaidForPrint } from './mermaidLoader'
 
 type MarkedParser = (typeof import('marked'))['marked']
@@ -309,7 +309,8 @@ body {
 }
 
 html.pdf-capture .cover,
-html.pdf-capture .diagram-page {
+html.pdf-capture .diagram-page,
+html.pdf-capture .dashboard-landscape {
   min-height: 0;
   break-before: auto;
   break-after: auto;
@@ -364,6 +365,23 @@ html.pdf-capture .diagram-page {
   padding: 0;
   display: flex;
 }
+.pdf-sheet .dashboard-landscape {
+  min-height: 100%;
+  height: 100%;
+  width: 100%;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+.pdf-sheet .dashboard-board {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
 .pdf-sheet .diagram-frame svg {
   max-height: 150mm;
   max-width: 100%;
@@ -375,6 +393,277 @@ html.pdf-capture .diagram-page {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+
+.dashboard-landscape {
+  page: landscape;
+}
+
+.dash-header {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.65rem;
+  border: 1px solid #e0c4c4;
+  background: linear-gradient(90deg, #fdf5f5 0%, #ffffff 55%);
+  padding: 0.45rem 0.7rem;
+  border-radius: 6px;
+  margin-bottom: 0.4rem;
+  flex-shrink: 0;
+}
+
+.dash-kicker {
+  margin: 0 0 0.15rem;
+  font-size: 8pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  color: #c62828;
+}
+
+.dash-title {
+  margin: 0.15rem 0 0.2rem;
+  font-size: 13pt;
+  color: #000;
+  font-family: 'PT Sans', sans-serif;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: 0;
+}
+
+.dash-meta {
+  margin: 0;
+  font-size: 9.5pt;
+  line-height: 1.4;
+  color: #333;
+  letter-spacing: 0;
+}
+
+.dash-badge {
+  font-size: 9pt;
+  padding: 0.4rem 0.55rem;
+  border-radius: 6px;
+  max-width: 16rem;
+  line-height: 1.45;
+  letter-spacing: 0;
+  flex-shrink: 0;
+}
+
+.dash-badge-ok {
+  background: #e8f5e9;
+  border: 1px solid #81c784;
+}
+
+.dash-badge-warn {
+  background: #fff8e1;
+  border: 1px solid #ffb74d;
+}
+
+.dashboard-board {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  height: 100%;
+  min-height: 0;
+}
+
+table.dash-layout {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 8px;
+  table-layout: fixed;
+  margin: 0;
+}
+
+table.dash-layout td {
+  border: none !important;
+  padding: 0 !important;
+  vertical-align: top;
+  background: transparent;
+  width: 25%;
+}
+
+table.dash-panels td {
+  width: 33.33%;
+}
+
+.dash-panel {
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  background: #fff;
+  overflow: visible;
+}
+
+.dash-panel-head {
+  background: #f3f3f3;
+  border-bottom: 1px solid #d8d8d8;
+  padding: 0.4rem 0.6rem;
+}
+
+.dash-stat {
+  border: 1px solid rgba(198, 40, 40, 0.28);
+  border-radius: 6px;
+  padding: 0.45rem 0.55rem 0.5rem;
+  background: #fafafa;
+  text-align: center;
+}
+
+.dash-stat-label {
+  margin: 0;
+  font-size: 8pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  line-height: 1.35;
+  color: #555;
+}
+
+.dash-stat-value {
+  margin: 0.2rem 0 0;
+  font-size: 16pt;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0;
+  color: #c62828;
+}
+
+.dash-stat-hint {
+  margin: 0.2rem 0 0;
+  font-size: 8.5pt;
+  color: #444;
+  line-height: 1.4;
+  letter-spacing: 0;
+}
+
+.dash-panel-head h3 {
+  margin: 0;
+  font-size: 10pt;
+  font-weight: 700;
+  color: #c62828;
+  font-family: 'PT Sans', sans-serif;
+  letter-spacing: 0;
+  line-height: 1.35;
+}
+
+.dash-panel-body {
+  padding: 0.45rem 0.55rem 0.55rem;
+  font-size: 9pt;
+  line-height: 1.5;
+  letter-spacing: 0;
+  word-spacing: 0.02em;
+  color: #000;
+  overflow: visible;
+}
+
+.dash-panel-body p { margin: 0.3rem 0; }
+
+.dash-vision {
+  margin: 0 0 0.35rem;
+  font-size: 9pt;
+  line-height: 1.5;
+}
+
+.dash-muted {
+  color: #555;
+  font-size: 8pt;
+}
+
+.dash-strategy {
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid #e5e5e5;
+}
+
+.dash-mini-list {
+  margin: 0.3rem 0;
+  padding-left: 1.1rem;
+  list-style: disc;
+  line-height: 1.5;
+}
+
+.dash-mini-list li {
+  margin: 0.2rem 0;
+  line-height: 1.5;
+}
+
+.dash-card-list {
+  margin: 0.3rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dash-card-list li {
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  padding: 0.3rem 0.45rem;
+  margin: 0.2rem 0;
+  background: #f9f9f9;
+}
+
+.dash-tags {
+  margin: 0.35rem 0;
+  line-height: 1.8;
+  letter-spacing: 0;
+}
+
+.dash-tag {
+  display: inline;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 0.05rem 0.35rem;
+  font-size: 8.5pt;
+  line-height: 1.6;
+  letter-spacing: 0;
+  background: #fff;
+  white-space: normal;
+}
+
+.dash-tag-primary {
+  border-color: #c62828;
+  color: #c62828;
+}
+
+.dash-tag-warn {
+  border-color: #f9a825;
+  background: #fffde7;
+}
+
+.dash-pill {
+  display: inline;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  padding: 0 0.3rem;
+  font-size: 8pt;
+  line-height: 1.5;
+  letter-spacing: 0;
+  background: #f5f5f5;
+  white-space: nowrap;
+}
+
+.dash-warn-list { color: #6d4c00; }
+
+.dash-cap-label {
+  margin: 0.4rem 0 0.15rem;
+  font-size: 8pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  line-height: 1.4;
+  color: #555;
+}
+
+.waf-bar {
+  display: flex;
+  height: 7px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #eeeeee;
+  margin: 0.35rem 0;
+}
+
+.waf-cumple { background: #43a047; display: block; height: 100%; }
+.waf-parcial { background: #fb8c00; display: block; height: 100%; }
+.waf-brecha { background: #e53935; display: block; height: 100%; }
 
 @media print {
   .screen-toolbar { display: none !important; }
@@ -444,24 +733,59 @@ function yearOf(fecha?: string) {
   return match?.[0] || String(new Date().getFullYear())
 }
 
-/** Descarga el arc42 como PDF, sin abrir otra ventana. */
-export async function exportArc42Pdf(documentTitle: string, markdown: string, fecha?: string): Promise<void> {
+export async function buildArc42PdfBlob(
+  documentTitle: string,
+  markdown: string,
+  fecha?: string,
+): Promise<{ blob: Blob; filename: string }> {
   const bodyHtml = await buildBodyHtml(markdown)
   const title = documentTitle || 'arc42'
-  await downloadStyledPdf(buildDocument(title, bodyHtml, 'arc42'), pdfFilename(title, 'arc42'), {
+  const filename = pdfFilename(title, 'arc42')
+  const blob = await generateStyledPdfBlob(buildDocument(title, bodyHtml, 'arc42'), {
     title,
     year: yearOf(fecha),
   })
+  return { blob, filename }
+}
+
+export async function buildConsolidadoPdfBlob(
+  documentTitle: string,
+  bodyHtml: string,
+  fecha?: string,
+): Promise<{ blob: Blob; filename: string }> {
+  const title = documentTitle || 'consolidado'
+  const filename = pdfFilename(title, 'consolidado')
+  const blob = await generateStyledPdfBlob(
+    buildDocument(title, `<div class="content-block consolidado-doc">${bodyHtml}</div>`, 'Consolidado', false, 'consolidado-doc'),
+    { title, year: yearOf(fecha) },
+  )
+  return { blob, filename }
+}
+
+export async function buildPresupuestoPdfBlob(
+  documentTitle: string,
+  markdown: string,
+  fecha?: string,
+): Promise<{ blob: Blob; filename: string }> {
+  const marked = await loadPrintMarked()
+  const html = await marked.parse(markdown)
+  const title = documentTitle || 'presupuesto'
+  const filename = pdfFilename(title, 'presupuesto')
+  const blob = await generateStyledPdfBlob(
+    buildDocument(title, `<div class="content-block">${html}</div>`, 'Presupuesto', false, 'budget-doc'),
+    { title, year: yearOf(fecha) },
+  )
+  return { blob, filename }
+}
+
+/** Descarga el arc42 como PDF, sin abrir otra ventana. */
+export async function exportArc42Pdf(documentTitle: string, markdown: string, fecha?: string): Promise<void> {
+  const { blob, filename } = await buildArc42PdfBlob(documentTitle, markdown, fecha)
+  downloadBlob(blob, filename)
 }
 
 /** Descarga el presupuesto como PDF, sin abrir otra ventana. */
 export async function exportPresupuestoPdf(documentTitle: string, markdown: string, fecha?: string): Promise<void> {
-  const marked = await loadPrintMarked()
-  const html = await marked.parse(markdown)
-  const title = documentTitle || 'presupuesto'
-  await downloadStyledPdf(
-    buildDocument(title, `<div class="content-block">${html}</div>`, 'Presupuesto', false, 'budget-doc'),
-    pdfFilename(title, 'presupuesto'),
-    { title, year: yearOf(fecha) },
-  )
+  const { blob, filename } = await buildPresupuestoPdfBlob(documentTitle, markdown, fecha)
+  downloadBlob(blob, filename)
 }

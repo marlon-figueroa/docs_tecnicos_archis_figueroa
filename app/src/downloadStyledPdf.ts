@@ -200,9 +200,16 @@ function paginate(doc: Document, root: HTMLElement) {
   }
 
   for (const node of flow) {
-    if (node.classList.contains('cover') || node.classList.contains('diagram-page')) {
+    if (
+      node.classList.contains('cover') ||
+      node.classList.contains('diagram-page') ||
+      node.classList.contains('dashboard-landscape')
+    ) {
       flush()
-      const next = node.classList.contains('diagram-page') ? 'landscape' : 'portrait'
+      const next =
+        node.classList.contains('diagram-page') || node.classList.contains('dashboard-landscape')
+          ? 'landscape'
+          : 'portrait'
       sheets.push(mountSheet(doc, [node], next))
       continue
     }
@@ -269,12 +276,11 @@ function stampSheet(sheet: HTMLElement, page: number, total: number, title: stri
   sheet.append(header, footer)
 }
 
-/** Renderiza el HTML del documento y descarga un PDF, sin abrir otra ventana. */
-export async function downloadStyledPdf(
+/** Genera un PDF a partir del HTML de impresión, sin descargarlo. */
+export async function generateStyledPdfBlob(
   html: string,
-  filename: string,
   running: { title: string; year: string } = { title: '', year: '' },
-) {
+): Promise<Blob> {
   const iframe = document.createElement('iframe')
   iframe.setAttribute('aria-hidden', 'true')
   iframe.style.cssText =
@@ -327,17 +333,30 @@ export async function downloadStyledPdf(
       placeImage(pdf, canvas)
     }
 
-    const blob = pdf.output('blob')
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = filename
-    link.rel = 'noopener'
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    setTimeout(() => URL.revokeObjectURL(url), 2000)
+    return pdf.output('blob')
   } finally {
     iframe.remove()
   }
+}
+
+export function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.rel = 'noopener'
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 2000)
+}
+
+/** Renderiza el HTML del documento y descarga un PDF, sin abrir otra ventana. */
+export async function downloadStyledPdf(
+  html: string,
+  filename: string,
+  running: { title: string; year: string } = { title: '', year: '' },
+) {
+  const blob = await generateStyledPdfBlob(html, running)
+  downloadBlob(blob, filename)
 }

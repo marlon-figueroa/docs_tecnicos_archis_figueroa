@@ -25,8 +25,18 @@ declare module '@nucleo/sugerir.js' {
     antipatrones: unknown[]
     servicios: Array<{ id: string; nombre: string }>
     motivos: unknown[]
+    revisiones: Array<{
+      id: string
+      paso: number
+      nivel: 'faltante' | 'incompleto' | 'contenido'
+      mensaje: string
+    }>
   }
-  export function aplicarSugerencias(doc: object): { documento: object; sugerencias: object }
+  export function aplicarSugerencias(doc: object): {
+    documento: object
+    sugerencias: object
+    aplicado: { patrones: string[]; antipatrones: string[]; servicios: string[] }
+  }
 }
 
 declare module '@nucleo/evaluar-waf.js' {
@@ -55,4 +65,9 @@ declare module '@nucleo/render-arc42.js' {
 
 declare module '@nucleo/presupuesto.js' {
   export function renderPresupuestoMarkdown(doc: object): string
+}
+
+declare module '@nucleo/consolidado.js' {
+  export function renderConsolidadoHtml(doc: object): string
+  export function renderConsolidadoMarkdown(doc: object): string
 }
