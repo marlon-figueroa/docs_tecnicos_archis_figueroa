@@ -43,13 +43,17 @@ function contentLimit(doc: Document, orientation: Orientation) {
   return (spec.heightMm - spec.padMm * 2) * pxPerMm(doc) - 4
 }
 
+function isElement(node: Node): node is HTMLElement {
+  return node.nodeType === 1
+}
+
 function flatten(root: HTMLElement) {
   const out: HTMLElement[] = []
   for (const child of [...root.children]) {
-    if (!(child instanceof HTMLElement)) continue
+    if (!isElement(child)) continue
     if (child.classList.contains('content-block')) {
       for (const inner of [...child.children]) {
-        if (inner instanceof HTMLElement) out.push(inner)
+        if (isElement(inner)) out.push(inner)
       }
     } else {
       out.push(child)
@@ -121,7 +125,7 @@ function unitsOf(source: HTMLElement, children: HTMLElement[]) {
 
 function splitChildren(source: HTMLElement, maxH: number) {
   const parent = source.parentElement
-  const children = [...source.children].filter((node): node is HTMLElement => node instanceof HTMLElement)
+  const children = [...source.children].filter(isElement)
   if (!parent || children.length <= 1) return [source]
 
   const parts: HTMLElement[] = []
@@ -248,8 +252,29 @@ function placeImage(
   pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', x, y, width, height)
 }
 
+function stampSheet(sheet: HTMLElement, page: number, total: number, title: string, year: string) {
+  const doc = sheet.ownerDocument
+  const header = doc.createElement('header')
+  header.className = 'pdf-running-header'
+  const titleEl = doc.createElement('span')
+  titleEl.className = 'pdf-running-title'
+  titleEl.textContent = title
+  const yearEl = doc.createElement('span')
+  yearEl.className = 'pdf-running-year'
+  yearEl.textContent = year
+  header.append(titleEl, yearEl)
+  const footer = doc.createElement('footer')
+  footer.className = 'pdf-running-footer'
+  footer.textContent = `Página ${page} de ${total}`
+  sheet.append(header, footer)
+}
+
 /** Renderiza el HTML del documento y descarga un PDF, sin abrir otra ventana. */
-export async function downloadStyledPdf(html: string, filename: string) {
+export async function downloadStyledPdf(
+  html: string,
+  filename: string,
+  running: { title: string; year: string } = { title: '', year: '' },
+) {
   const iframe = document.createElement('iframe')
   iframe.setAttribute('aria-hidden', 'true')
   iframe.style.cssText =
@@ -270,6 +295,9 @@ export async function downloadStyledPdf(html: string, filename: string) {
     root.style.width = `${PORTRAIT.widthMm - PORTRAIT.padMm * 2}mm`
     const sheets = paginate(doc, root)
     if (!sheets.length || limit <= 0) throw new Error('El documento está vacío.')
+    const runningTitle = running.title.trim() || 'Documento'
+    const runningYear = running.year.trim() || String(new Date().getFullYear())
+    sheets.forEach((sheet, index) => stampSheet(sheet, index + 1, sheets.length, runningTitle, runningYear))
 
     const [{ jsPDF }, html2canvasMod] = await Promise.all([import('jspdf'), import('html2canvas')])
     const html2canvas = html2canvasMod.default
@@ -299,7 +327,16 @@ export async function downloadStyledPdf(html: string, filename: string) {
       placeImage(pdf, canvas)
     }
 
-    pdf.save(filename)
+    const blob = pdf.output('blob')
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    link.rel = 'noopener'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 2000)
   } finally {
     iframe.remove()
   }

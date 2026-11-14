@@ -222,6 +222,8 @@ export default function App() {
   const [escenarioAEliminar, setEscenarioAEliminar] = useState<number | null>(null)
   const [exportandoPdf, setExportandoPdf] = useState(false)
   const [exportandoPresupuesto, setExportandoPresupuesto] = useState(false)
+  const [confirmarReinicio, setConfirmarReinicio] = useState(false)
+  const archivoJson = useRef<HTMLInputElement>(null)
 
   const sugerencias = useMemo(() => sugerirParaDocumento(doc), [doc])
 
@@ -253,6 +255,10 @@ export default function App() {
   }, [servicios])
 
   const progressPct = Math.round(((step + 1) / PASOS.length) * 100)
+
+  useEffect(() => {
+    document.getElementById(`paso-nav-${step}`)?.scrollIntoView({ block: 'nearest' })
+  }, [step])
 
   const patch = useCallback((fn: (d: Doc) => void) => {
     setDoc((prev: Doc) => {
@@ -291,6 +297,17 @@ export default function App() {
     setDoc(data)
   }
 
+  const reiniciar = () => {
+    const d = documentoVacio()
+    inicializarEvaluacion(d)
+    setDoc(d)
+    setStep(0)
+    setSugerenciasPanelOpen(false)
+    setEscenarioAEliminar(null)
+    setConfirmarReinicio(false)
+    if (archivoJson.current) archivoJson.current.value = ''
+  }
+
   const cargarArchivo = (file: File) => {
     const reader = new FileReader()
     reader.onload = () => {
@@ -314,21 +331,21 @@ export default function App() {
     try {
       const titulo = doc.meta?.nombreProyecto?.trim() || 'arquitectura'
       const { exportArc42Pdf } = await import('./arc42DocumentExport')
-      await exportArc42Pdf(titulo, preview)
+      await exportArc42Pdf(titulo, preview, doc.meta?.fecha)
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'No se pudo generar el PDF.'
       window.alert(msg)
     } finally {
       setExportandoPdf(false)
     }
-  }, [doc.meta?.nombreProyecto, preview])
+  }, [doc.meta?.fecha, doc.meta?.nombreProyecto, preview])
 
   const descargarPdfPresupuesto = useCallback(async () => {
     setExportandoPresupuesto(true)
     try {
       const titulo = doc.meta?.nombreProyecto?.trim() || 'presupuesto'
       const { exportPresupuestoPdf } = await import('./arc42DocumentExport')
-      await exportPresupuestoPdf(titulo, renderPresupuestoMarkdown(doc))
+      await exportPresupuestoPdf(titulo, renderPresupuestoMarkdown(doc), doc.meta?.fecha)
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'No se pudo generar el PDF del presupuesto.'
       window.alert(msg)
@@ -370,6 +387,7 @@ export default function App() {
             </button>
             <label className="btn btn-sm btn-ghost cursor-pointer gap-1.5">
               <input
+                ref={archivoJson}
                 type="file"
                 accept="application/json"
                 className="hidden"
@@ -378,6 +396,10 @@ export default function App() {
               <Icon icon={FileUp} />
               Abrir JSON
             </label>
+            <button type="button" className="btn btn-sm btn-ghost gap-1.5" onClick={() => setConfirmarReinicio(true)}>
+              <RotateCcw className="size-4 shrink-0" aria-hidden />
+              Reiniciar
+            </button>
             <button
               type="button"
               className="btn btn-sm btn-primary gap-1.5"
@@ -984,57 +1006,106 @@ export default function App() {
 
       <div className="drawer-side z-30">
         <label htmlFor="app-drawer" className="drawer-overlay" aria-label="Cerrar menú" />
-        <aside className="bg-neutral text-neutral-content min-h-full lg:min-h-screen w-72 p-4 flex flex-col gap-5">
-          <div className="flex gap-3 items-start">
-            <div className="rounded-lg bg-primary/20 p-2 shrink-0">
-              <Layers className="size-6 text-primary-content" aria-hidden />
-            </div>
-            <div>
-              <p className="font-semibold text-lg leading-tight">Arquitectura cloud</p>
-              <p className="text-sm opacity-70 mt-1">arc42 · C4 · Well-Architected</p>
+        <aside className="flex min-h-full w-80 flex-col bg-white text-base-content shadow-[6px_0_28px_-10px_rgba(30,16,60,0.28)] lg:min-h-screen lg:border-r lg:border-base-300/70">
+          <div className="p-4 pb-2">
+            <div className="flex items-start gap-3 rounded-2xl bg-white p-3.5 shadow-[0_10px_24px_-14px_rgba(95,39,205,0.55),0_1px_2px_rgba(20,10,40,0.06)] ring-1 ring-base-300/80">
+              <div className="shrink-0 rounded-xl bg-primary p-2 text-primary-content shadow-[0_8px_16px_-8px_rgba(95,39,205,0.9)]">
+                <Layers className="size-5" aria-hidden />
+              </div>
+              <div className="min-w-0">
+                <p className="text-base font-semibold leading-tight">Arquitectura cloud</p>
+                <p className="mt-1 text-xs text-base-content/60">arc42 · C4 · Well-Architected</p>
+              </div>
             </div>
           </div>
-          <div>
-            <div className="flex justify-between text-xs opacity-80 mb-1">
-              <span>Progreso</span>
-              <span>
-                {step + 1}/{PASOS.length}
-              </span>
+          <div className="px-4 pb-2">
+            <div className="rounded-2xl bg-white px-3.5 py-3 shadow-[0_8px_18px_-14px_rgba(20,10,40,0.55)] ring-1 ring-base-300/70">
+              <div className="mb-2 flex items-center justify-between text-xs">
+                <span className="font-medium text-base-content/70">Progreso</span>
+                <span className="tabular-nums text-primary">
+                  {step + 1}/{PASOS.length}
+                </span>
+              </div>
+              <div
+                className="h-2 overflow-hidden rounded-full bg-base-200 shadow-[inset_0_1px_2px_rgba(20,10,40,0.16)]"
+                role="progressbar"
+                aria-valuenow={progressPct}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label="Progreso del asistente"
+              >
+                <div
+                  className="h-full rounded-full bg-primary transition-[width] duration-300"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
             </div>
-            <progress className="progress progress-primary w-full" value={progressPct} max="100" />
           </div>
-          <ul className="menu menu-sm gap-0.5 flex-1 overflow-y-auto">
-            {PASOS.map((t, i) => (
-              <li key={t}>
+          <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-3" aria-label="Pasos del asistente">
+            {PASOS.map((t, i) => {
+              const actual = i === step
+              const visto = i < step
+              return (
                 <button
+                  key={t}
+                  id={`paso-nav-${i}`}
                   type="button"
-                  className={`flex items-center gap-2 ${i === step ? 'active' : ''}`}
+                  aria-current={actual ? 'step' : undefined}
+                  className={[
+                    'flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition duration-150',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                    actual
+                      ? 'bg-white text-primary shadow-[0_10px_18px_-12px_rgba(95,39,205,0.75),inset_0_1px_0_rgba(255,255,255,0.9)] ring-1 ring-primary/25'
+                      : 'text-base-content/75 hover:bg-white hover:text-base-content hover:shadow-[0_8px_16px_-12px_rgba(20,10,40,0.45)]',
+                  ].join(' ')}
                   onClick={() => {
                     setStep(i)
                     const el = document.getElementById('app-drawer') as HTMLInputElement | null
                     if (el) el.checked = false
                   }}
                 >
-                  <Icon icon={STEP_ICONS[i]} size="sm" className="opacity-80" />
-                  <span className="flex-1 text-left">{t}</span>
-                  <span className="badge badge-sm badge-neutral">{i + 1}</span>
+                  <span
+                    className={[
+                      'grid size-7 shrink-0 place-items-center rounded-lg text-xs font-semibold tabular-nums',
+                      actual
+                        ? 'bg-primary text-primary-content shadow-[0_6px_12px_-6px_rgba(95,39,205,0.95)]'
+                        : visto
+                          ? 'bg-success/15 text-success'
+                          : 'bg-base-200 text-base-content/55 shadow-[inset_0_1px_1px_rgba(20,10,40,0.08)]',
+                    ].join(' ')}
+                  >
+                    {visto && !actual ? <CircleCheck className="size-3.5" aria-hidden /> : i + 1}
+                  </span>
+                  <Icon
+                    icon={STEP_ICONS[i]}
+                    size="sm"
+                    className={actual ? 'text-primary' : visto ? 'text-success' : 'text-base-content/45'}
+                  />
+                  <span className={`min-w-0 flex-1 text-sm leading-snug ${actual ? 'font-semibold' : ''}`}>{t}</span>
                 </button>
-              </li>
-            ))}
-          </ul>
-          <div className={`alert text-sm py-3 ${validation.valido ? 'alert-success' : 'alert-warning'}`}>
-            {validation.valido ? (
-              <CircleCheck className="size-6 shrink-0" aria-hidden />
-            ) : (
-              <CircleAlert className="size-6 shrink-0" aria-hidden />
-            )}
-            <div>
-              <p className="font-medium">{validation.valido ? 'Especificación válida' : 'Pendientes'}</p>
-              <p className="text-xs opacity-90">
-                {validation.valido
-                  ? 'Lista para exportar.'
-                  : `${validation.errores.length} error(es) de validación`}
-              </p>
+              )
+            })}
+          </nav>
+          <div className="p-4 pt-2">
+            <div
+              className={[
+                'flex items-start gap-2.5 rounded-2xl bg-white px-3.5 py-3 text-sm shadow-[0_10px_20px_-14px_rgba(20,10,40,0.5)] ring-1',
+                validation.valido ? 'ring-success/30' : 'ring-warning/40',
+              ].join(' ')}
+            >
+              {validation.valido ? (
+                <CircleCheck className="mt-0.5 size-5 shrink-0 text-success" aria-hidden />
+              ) : (
+                <CircleAlert className="mt-0.5 size-5 shrink-0 text-warning" aria-hidden />
+              )}
+              <div>
+                <p className="font-medium">{validation.valido ? 'Especificación válida' : 'Pendientes'}</p>
+                <p className="text-xs text-base-content/65">
+                  {validation.valido
+                    ? 'Lista para exportar.'
+                    : `${validation.errores.length} error(es) de validación`}
+                </p>
+              </div>
             </div>
           </div>
         </aside>
@@ -1083,6 +1154,38 @@ export default function App() {
           </div>
           <form method="dialog" className="modal-backdrop">
             <button type="button" aria-label="Cancelar eliminación" onClick={() => setEscenarioAEliminar(null)}>
+              cerrar
+            </button>
+          </form>
+        </dialog>
+      ) : null}
+      {confirmarReinicio ? (
+        <dialog
+          className="modal modal-open"
+          aria-labelledby="confirmar-reinicio"
+          onCancel={(e) => {
+            e.preventDefault()
+            setConfirmarReinicio(false)
+          }}
+        >
+          <div className="modal-box">
+            <h3 id="confirmar-reinicio" className="font-semibold text-lg">
+              Reiniciar el asistente
+            </h3>
+            <p className="py-3 text-sm text-base-content/75 leading-relaxed">
+              Se vacían los formularios, la evaluación Well-Architected y el diagrama. Esta acción no se puede deshacer.
+            </p>
+            <div className="modal-action">
+              <button type="button" className="btn" onClick={() => setConfirmarReinicio(false)}>
+                Cancelar
+              </button>
+              <button type="button" className="btn btn-error" onClick={reiniciar}>
+                Reiniciar
+              </button>
+            </div>
+          </div>
+          <form method="dialog" className="modal-backdrop">
+            <button type="button" aria-label="Cancelar reinicio" onClick={() => setConfirmarReinicio(false)}>
               cerrar
             </button>
           </form>

@@ -319,6 +319,39 @@ html.pdf-capture .diagram-page {
   border: none;
 }
 
+.pdf-sheet { position: relative; }
+.pdf-running-header,
+.pdf-running-footer {
+  position: absolute;
+  left: 16mm;
+  right: 16mm;
+  z-index: 2;
+  font-size: 9pt;
+  line-height: 1.2;
+}
+.pdf-running-header {
+  top: 6mm;
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 0.75rem;
+  font-family: 'PT Sans Narrow', 'PT Sans', sans-serif;
+  font-weight: 400;
+  color: #c62828;
+  text-align: right;
+}
+.pdf-running-year { letter-spacing: 0.04em; }
+.pdf-running-footer {
+  bottom: 6mm;
+  text-align: center;
+  font-family: 'PT Sans', sans-serif;
+  color: #000000;
+}
+.pdf-sheet.landscape .pdf-running-header,
+.pdf-sheet.landscape .pdf-running-footer {
+  left: 12mm;
+  right: 12mm;
+}
 .pdf-sheet .content-block { height: 100%; }
 .pdf-sheet .cover {
   min-height: 100%;
@@ -406,20 +439,29 @@ function buildDocument(title: string, bodyHtml: string, kind = 'arc42', banner =
 </html>`
 }
 
+function yearOf(fecha?: string) {
+  const match = String(fecha || '').match(/\d{4}/)
+  return match?.[0] || String(new Date().getFullYear())
+}
+
 /** Descarga el arc42 como PDF, sin abrir otra ventana. */
-export async function exportArc42Pdf(documentTitle: string, markdown: string): Promise<void> {
+export async function exportArc42Pdf(documentTitle: string, markdown: string, fecha?: string): Promise<void> {
   const bodyHtml = await buildBodyHtml(markdown)
   const title = documentTitle || 'arc42'
-  await downloadStyledPdf(buildDocument(title, bodyHtml, 'arc42'), pdfFilename(title, 'arc42'))
+  await downloadStyledPdf(buildDocument(title, bodyHtml, 'arc42'), pdfFilename(title, 'arc42'), {
+    title,
+    year: yearOf(fecha),
+  })
 }
 
 /** Descarga el presupuesto como PDF, sin abrir otra ventana. */
-export async function exportPresupuestoPdf(documentTitle: string, markdown: string): Promise<void> {
+export async function exportPresupuestoPdf(documentTitle: string, markdown: string, fecha?: string): Promise<void> {
   const marked = await loadPrintMarked()
   const html = await marked.parse(markdown)
   const title = documentTitle || 'presupuesto'
   await downloadStyledPdf(
     buildDocument(title, `<div class="content-block">${html}</div>`, 'Presupuesto', false, 'budget-doc'),
     pdfFilename(title, 'presupuesto'),
+    { title, year: yearOf(fecha) },
   )
 }
