@@ -78,11 +78,12 @@ export function ArchitectureDiagram({ doc }: ArchitectureDiagramProps) {
       const graph = new dia.Graph({}, { cellNamespace: shapes })
       graphRef.current = graph
 
+      const host = hostRef.current
       const paper = new dia.Paper({
-        el: hostRef.current,
+        el: host,
         model: graph,
-        width: hostRef.current.clientWidth || 720,
-        height: 520,
+        width: host.clientWidth || 720,
+        height: host.clientHeight || 640,
         gridSize: 10,
         drawGrid: { name: 'dot', args: { color: '#ddd6f3', thickness: 1.2 } },
         background: { color: 'oklch(99.2% 0.006 300)' },
@@ -141,7 +142,6 @@ export function ArchitectureDiagram({ doc }: ArchitectureDiagramProps) {
 
   useEffect(() => {
     const host = hostRef.current
-    const wrap = wrapRef.current
     if (!host || !ready) return
 
     const onWheel = (e: WheelEvent) => {
@@ -190,10 +190,14 @@ export function ArchitectureDiagram({ doc }: ArchitectureDiagramProps) {
     const ro = new ResizeObserver(() => {
       if (resizeTimerRef.current) clearTimeout(resizeTimerRef.current)
       resizeTimerRef.current = setTimeout(() => {
+        const paper = paperRef.current
+        const viewport = hostRef.current
+        if (!paper || !viewport) return
+        paper.setDimensions(viewport.clientWidth, viewport.clientHeight)
         if (!userAdjustedRef.current) fit()
-      }, 200)
+      }, 80)
     })
-    if (wrap) ro.observe(wrap)
+    ro.observe(host)
 
     return () => {
       host.removeEventListener('wheel', onWheel)
@@ -235,7 +239,7 @@ export function ArchitectureDiagram({ doc }: ArchitectureDiagramProps) {
         </div>
       </div>
 
-      <div className="relative h-[min(70vh,720px)] min-h-[480px] bg-[oklch(99.2%_0.006_300)]">
+      <div className="relative h-[70vh] min-h-[32rem] bg-[oklch(99.2%_0.006_300)]">
         <div
           ref={hostRef}
           className="absolute inset-0 cursor-grab active:cursor-grabbing overflow-hidden joint-host touch-none"

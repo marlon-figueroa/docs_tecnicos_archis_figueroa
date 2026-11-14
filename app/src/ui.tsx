@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react'
+import { useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { Cloud, Trash2 } from 'lucide-react'
 
@@ -254,16 +254,40 @@ export function PatternRow({
   options: { value: string; label: string }[]
   onChange: (v: string) => void
 }) {
+  const group = useId()
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 sm:gap-4 items-center p-4 border border-base-300 rounded-xl bg-base-100">
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-3 lg:gap-6 items-center p-4 border border-base-300 rounded-xl bg-base-100">
       <span className="text-sm font-medium min-w-0 break-words">{nombre}</span>
-      <SelectInput className="select-sm w-full sm:w-44 justify-self-stretch sm:justify-self-end" value={value} onChange={(e) => onChange(e.target.value)}>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </SelectInput>
+      <div
+        role="radiogroup"
+        aria-label={nombre}
+        className="flex flex-col sm:flex-row sm:flex-wrap gap-2 w-full lg:w-auto lg:justify-end"
+      >
+        {options.map((o) => {
+          const selected = value === o.value
+          return (
+            <label
+              key={o.value}
+              className={[
+                'flex items-center gap-2 min-h-10 px-3 rounded-lg border cursor-pointer text-sm transition-colors',
+                selected
+                  ? 'border-primary bg-primary/10 text-base-content font-medium'
+                  : 'border-base-300 bg-base-100 hover:border-primary/40',
+              ].join(' ')}
+            >
+              <input
+                type="radio"
+                className="radio radio-primary radio-sm"
+                name={group}
+                value={o.value}
+                checked={selected}
+                onChange={() => onChange(o.value)}
+              />
+              {o.label}
+            </label>
+          )
+        })}
+      </div>
     </div>
   )
 }

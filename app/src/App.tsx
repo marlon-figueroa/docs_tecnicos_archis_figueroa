@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useMemo, useState, type ComponentProps } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from 'react'
 import { initCatalogos } from './initCatalogos'
 import {
   ChoiceChip,
@@ -22,6 +22,7 @@ import {
   ChevronRight,
   CircleAlert,
   CircleCheck,
+  CircleDollarSign,
   FileDown,
   FileText,
   FileUp,
@@ -40,6 +41,7 @@ import { aplicarSugerencias, sugerirParaDocumento } from '@nucleo/sugerir.js'
 import { inicializarEvaluacion, resumenEvaluacion } from '@nucleo/evaluar-waf.js'
 import { validarDocumento } from '@nucleo/validar.js'
 import { renderArc42Markdown } from '@nucleo/render-arc42.js'
+import { renderPresupuestoMarkdown } from '@nucleo/presupuesto.js'
 import { SuggestionsPanel, type SugerenciasPreview } from './SuggestionsPanel'
 
 const Arc42Preview = lazy(() => import('./Arc42Preview').then((m) => ({ default: m.Arc42Preview })))
@@ -108,6 +110,94 @@ function labelPilar(id: string) {
     .join(' ')
 }
 
+type ControlWaf = { id: string; texto: string; estado: string; brecha: string }
+
+function PilarAccordion({
+  pilar,
+  controles,
+  onEstado,
+  onBrecha,
+}: {
+  pilar: string
+  controles: ControlWaf[]
+  onEstado: (controlId: string, estado: string) => void
+  onBrecha: (controlId: string, brecha: string) => void
+}) {
+  const detailsRef = useRef<HTMLDetailsElement>(null)
+  const counts = controles.reduce(
+    (acc, c) => {
+      acc[c.estado] = (acc[c.estado] || 0) + 1
+      return acc
+    },
+    {} as Record<string, number>
+  )
+
+  useEffect(() => {
+    if (detailsRef.current) detailsRef.current.open = (counts.brecha || 0) > 0
+    // Solo al montar: después el usuario abre y cierra sin que un cambio de estado lo fuerce.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  return (
+    <details
+      ref={detailsRef}
+      className="collapse collapse-arrow bg-base-100 border border-base-300 rounded-2xl shadow-sm"
+    >
+      <summary className="collapse-title min-h-16 py-4 pr-12 cursor-pointer">
+        <span className="flex flex-wrap items-center gap-2">
+          <span className="font-semibold text-base text-base-content">{labelPilar(pilar)}</span>
+          <span className="badge badge-ghost badge-sm">{controles.length} controles</span>
+          {(counts.brecha || 0) > 0 ? (
+            <span className="badge badge-error badge-outline badge-sm">{counts.brecha} brecha</span>
+          ) : null}
+          {(counts.parcial || 0) > 0 ? (
+            <span className="badge badge-warning badge-outline badge-sm">{counts.parcial} parcial</span>
+          ) : null}
+          {(counts.cumple || 0) > 0 ? (
+            <span className="badge badge-success badge-outline badge-sm">{counts.cumple} cumple</span>
+          ) : null}
+        </span>
+      </summary>
+      <div className="collapse-content min-w-0 px-2 sm:px-4">
+        <div className="flex flex-col gap-3 pb-4">
+          {controles.map((c) => (
+            <article key={c.id} className="rounded-xl border border-base-200 bg-base-200/25 p-4 min-w-0">
+              <div className="flex flex-col lg:flex-row lg:items-start gap-3">
+                <p className="flex-1 min-w-0 text-sm leading-relaxed text-base-content/90">
+                  <span className="badge badge-outline badge-sm font-mono mr-2 align-middle">{c.id}</span>
+                  {c.texto}
+                </p>
+                <SelectInput
+                  className="select-sm w-full lg:w-44 shrink-0"
+                  value={c.estado}
+                  aria-label={`Estado de ${c.id}`}
+                  onChange={(e) => onEstado(c.id, e.target.value)}
+                >
+                  <option value="cumple">Cumple</option>
+                  <option value="parcial">Parcial</option>
+                  <option value="brecha">Brecha</option>
+                  <option value="no-aplica">No aplica</option>
+                </SelectInput>
+              </div>
+              {c.estado === 'brecha' ? (
+                <div className="mt-3">
+                  <Field label="Descripción de la brecha">
+                    <TextInput
+                      placeholder="Qué falta y cómo se cerrará"
+                      value={c.brecha}
+                      onChange={(e) => onBrecha(c.id, e.target.value)}
+                    />
+                  </Field>
+                </div>
+              ) : null}
+            </article>
+          ))}
+        </div>
+      </div>
+    </details>
+  )
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Doc = any
 
@@ -131,6 +221,7 @@ export default function App() {
   const [sugerenciasPanelOpen, setSugerenciasPanelOpen] = useState(false)
   const [escenarioAEliminar, setEscenarioAEliminar] = useState<number | null>(null)
   const [exportandoPdf, setExportandoPdf] = useState(false)
+  const [exportandoPresupuesto, setExportandoPresupuesto] = useState(false)
 
   const sugerencias = useMemo(() => sugerirParaDocumento(doc), [doc])
 
@@ -231,6 +322,20 @@ export default function App() {
       setExportandoPdf(false)
     }
   }, [doc.meta?.nombreProyecto, preview])
+
+  const descargarPdfPresupuesto = useCallback(async () => {
+    setExportandoPresupuesto(true)
+    try {
+      const titulo = doc.meta?.nombreProyecto?.trim() || 'presupuesto'
+      const { exportPresupuestoPdf } = await import('./arc42DocumentExport')
+      await exportPresupuestoPdf(titulo, renderPresupuestoMarkdown(doc))
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'No se pudo generar el PDF del presupuesto.'
+      window.alert(msg)
+    } finally {
+      setExportandoPresupuesto(false)
+    }
+  }, [doc])
 
   return (
     <div className="drawer lg:drawer-open min-h-screen">
@@ -673,54 +778,27 @@ export default function App() {
                   <span className="badge badge-warning badge-outline">{evalResumen.parcial} parcial</span>
                   <span className="badge badge-error badge-outline">{evalResumen.brecha} brecha</span>
                 </Box>
-                {(doc.evaluacionWellArchitected?.pilares || []).map(
-                  (p: { pilar: string; controles: { id: string; texto: string; estado: string; brecha: string }[] }) => (
-                    <details
-                      key={p.pilar}
-                      className="collapse collapse-arrow border border-base-300 bg-base-100 rounded-xl mb-3"
-                      open={evalResumen.brecha > 0 && p.controles.some((c) => c.estado === 'brecha')}
-                    >
-                      <summary className="font-medium text-sm py-1">{labelPilar(p.pilar)}</summary>
-                      <Box className="collapse-content px-3 pb-3 min-w-0">
-                        {p.controles.map((c) => (
-                          <div key={c.id} className="py-4 px-3 border-b border-base-200 last:border-0 space-y-3">
-                            <p className="text-sm leading-relaxed text-base-content/85">
-                              <span className="badge badge-outline badge-sm font-mono mr-2 align-middle">{c.id}</span>
-                              {c.texto}
-                            </p>
-                            <SelectInput
-                              className="select-sm w-full"
-                              value={c.estado}
-                              onChange={(e) => setControlEstado(p.pilar, c.id, e.target.value)}
-                            >
-                              <option value="cumple">Cumple</option>
-                              <option value="parcial">Parcial</option>
-                              <option value="brecha">Brecha</option>
-                              <option value="no-aplica">No aplica</option>
-                            </SelectInput>
-                            {c.estado === 'brecha' && (
-                              <Field label="Descripción de la brecha">
-                                <TextInput
-                                  placeholder="Qué falta y cómo se cerrará"
-                                  value={c.brecha}
-                                  onChange={(e) =>
-                                    patch((d) => {
-                                      const bloque = d.evaluacionWellArchitected.pilares.find(
-                                        (x: { pilar: string }) => x.pilar === p.pilar
-                                      )
-                                      const ctrl = bloque.controles.find((x: { id: string }) => x.id === c.id)
-                                      ctrl.brecha = e.target.value
-                                    })
-                                  }
-                                />
-                              </Field>
-                            )}
-                          </div>
-                        ))}
-                      </Box>
-                    </details>
-                  )
-                )}
+                <div className="flex flex-col gap-3 w-full min-w-0">
+                  {(doc.evaluacionWellArchitected?.pilares || []).map(
+                    (p: { pilar: string; controles: ControlWaf[] }) => (
+                      <PilarAccordion
+                        key={p.pilar}
+                        pilar={p.pilar}
+                        controles={p.controles || []}
+                        onEstado={(controlId, estado) => setControlEstado(p.pilar, controlId, estado)}
+                        onBrecha={(controlId, brecha) =>
+                          patch((d) => {
+                            const bloque = d.evaluacionWellArchitected.pilares.find(
+                              (x: { pilar: string }) => x.pilar === p.pilar
+                            )
+                            const ctrl = bloque.controles.find((x: { id: string }) => x.id === controlId)
+                            ctrl.brecha = brecha
+                          })
+                        }
+                      />
+                    )
+                  )}
+                </div>
               </FormStack>
             )}
 
@@ -818,6 +896,19 @@ export default function App() {
                     >
                       <Braces className="size-4 shrink-0" aria-hidden />
                       Descargar JSON
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary join-item w-full sm:w-auto gap-2"
+                      disabled={exportandoPresupuesto}
+                      onClick={() => void descargarPdfPresupuesto()}
+                    >
+                      {exportandoPresupuesto ? (
+                        <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
+                      ) : (
+                        <CircleDollarSign className="size-4 shrink-0" aria-hidden />
+                      )}
+                      {exportandoPresupuesto ? 'Generando PDF…' : 'PDF presupuesto'}
                     </button>
                     <button
                       type="button"

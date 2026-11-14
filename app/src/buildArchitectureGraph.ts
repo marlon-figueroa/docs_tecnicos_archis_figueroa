@@ -46,18 +46,20 @@ function lineWrap(text: string, maxChars: number, maxLines: number) {
   return lines.join('\n')
 }
 
-function laneLabel(shapes: GraphShapes, x: number, y: number, text: string) {
+function laneLabel(shapes: GraphShapes, x: number, y: number, text: string, width = 360) {
   return new shapes.standard.Rectangle({
     position: { x, y },
-    size: { width: 140, height: 22 },
+    size: { width, height: 28 },
     attrs: {
       body: { fill: 'transparent', stroke: 'transparent' },
       label: {
         text: text.toUpperCase(),
         fill: LABEL_FILL,
-        fontSize: 10,
+        fontSize: 11,
         fontWeight: 700,
-        letterSpacing: 0.6,
+        letterSpacing: 0.8,
+        textAnchor: 'start',
+        textVerticalAnchor: 'middle',
         refX: 0,
         refY: '50%',
       },
@@ -184,7 +186,8 @@ export function buildArchitectureGraph(doc: any, shapes: GraphShapes): GraphBuil
   const cloudWidth = Math.max(contextSpan, blockSpan, svcSpan, 560) + 64
   const width = cloudWidth + MARGIN * 2
 
-  const actorY = 78
+  const laneY = 64
+  const actorY = laneY + 28 + 36
   const cloudTop = actorY + NODE_H + 56
   const bloqueY = cloudTop + 52
   const svcTop = bloqueY + NODE_H + 56
@@ -205,7 +208,7 @@ export function buildArchitectureGraph(doc: any, shapes: GraphShapes): GraphBuil
     )
   }
 
-  cells.push(laneLabel(shapes, MARGIN, actorY - 26, 'Personas y sistemas externos'))
+  cells.push(laneLabel(shapes, MARGIN, laneY, 'Personas y sistemas externos', Math.min(420, cloudWidth)))
 
   const cloud = new shapes.standard.Rectangle({
     position: { x: MARGIN, y: cloudTop },

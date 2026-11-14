@@ -52,3 +52,7 @@ declare module '@nucleo/validar.js' {
 declare module '@nucleo/render-arc42.js' {
   export function renderArc42Markdown(doc: object): string
 }
+
+declare module '@nucleo/presupuesto.js' {
+  export function renderPresupuestoMarkdown(doc: object): string
+}

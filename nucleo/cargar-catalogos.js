@@ -29,6 +29,7 @@ function ensureDiskCatalogos() {
     buenasPracticas: loadJson('buenas-practicas.json'),
     controlesWaf: loadJson('controles-waf.json'),
     reglas: loadJson('reglas-sugerencia.json'),
+    costos: loadJson('costos-nube.json'),
   });
   diskLoaded = true;
 }

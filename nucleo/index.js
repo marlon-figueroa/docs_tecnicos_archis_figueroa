@@ -5,3 +5,4 @@ export { sugerirParaDocumento, aplicarSugerencias } from './sugerir.js';
 export { validarDocumento } from './validar.js';
 export { inicializarEvaluacion, resumenEvaluacion, buenasPracticasParaDocumento } from './evaluar-waf.js';
 export { renderArc42Markdown } from './render-arc42.js';
+export { renderPresupuestoMarkdown } from './presupuesto.js';

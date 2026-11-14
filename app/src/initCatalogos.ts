@@ -5,6 +5,7 @@ import antipatrones from '../../catalogos/antipatrones.json'
 import buenasPracticas from '../../catalogos/buenas-practicas.json'
 import controlesWaf from '../../catalogos/controles-waf.json'
 import reglas from '../../catalogos/reglas-sugerencia.json'
+import costos from '../../catalogos/costos-nube.json'
 
 let loaded = false
 
@@ -17,6 +18,7 @@ export function initCatalogos() {
     buenasPracticas,
     controlesWaf,
     reglas,
+    costos,
   })
   loaded = true
 }

@@ -1,3 +1,4 @@
+import { downloadStyledPdf, pdfFilename } from './downloadStyledPdf'
 import { loadMermaidForPrint } from './mermaidLoader'
 
 type MarkedParser = (typeof import('marked'))['marked']
@@ -68,7 +69,9 @@ body {
 }
 
 .content-block h1 { font-size: 22pt; border-bottom: 1px solid #e5e5e5; padding-bottom: 0.35rem; }
+.content-block h2.toc-title { break-before: auto; page-break-before: auto; }
 .content-block h2 { font-size: 16pt; margin-top: 1.5rem; }
+.content-block h2.chapter { break-before: page; page-break-before: always; }
 .content-block h3 { font-size: 13pt; }
 .content-block h4 { font-size: 11.5pt; }
 
@@ -91,6 +94,116 @@ body {
   color: #333333;
   font-style: italic;
 }
+
+.content-block blockquote {
+  margin: 0.6rem 0 1rem;
+  padding: 0.55rem 0.85rem;
+  border-left: 3px solid #c62828;
+  background: #fafafa;
+  color: #333333;
+  font-size: 10pt;
+}
+
+.content-block table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.55rem 0 0.35rem;
+  font-size: 10pt;
+  page-break-inside: auto;
+}
+
+.content-block thead { display: table-header-group; }
+
+.content-block th,
+.content-block td {
+  border: 1px solid #d0d0d0;
+  padding: 0.35rem 0.55rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.content-block th {
+  font-family: 'PT Sans Narrow', 'PT Sans', sans-serif;
+  font-weight: 400;
+  color: #c62828;
+  background: #fafafa;
+}
+
+.content-block table.budget td:last-child,
+.content-block table.budget th:last-child,
+.content-block h3 + table td:last-child,
+.content-block h3 + table th:last-child {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.cover {
+  break-after: page;
+  page-break-after: always;
+  min-height: 22cm;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 1.5cm 0 2cm;
+}
+
+.cover-kicker,
+.toc-title {
+  font-family: 'PT Sans Narrow', 'PT Sans', sans-serif;
+  font-weight: 400;
+  color: #c62828;
+}
+
+.cover-kicker {
+  font-size: 11pt;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0 0 0.8rem;
+}
+
+.cover h1 {
+  font-size: 28pt;
+  line-height: 1.15;
+  border: none;
+  margin: 0 0 0.8rem;
+  padding: 0;
+}
+
+.cover-rule {
+  width: 4.5rem;
+  border-top: 2px solid #c62828;
+  margin: 0 0 1.2rem;
+}
+
+.cover-meta {
+  margin: 0.15rem 0;
+  font-size: 12pt;
+}
+
+.cover-note {
+  margin-top: 2rem;
+  max-width: 32rem;
+  font-size: 10pt;
+  color: #333333;
+}
+
+.toc { margin: 0 0 1.25rem; }
+.toc ol { margin: 0.4rem 0 0.4rem 1.3rem; }
+.toc li { margin: 0.28rem 0; }
+.toc a { color: #000000; text-decoration: none; }
+
+.glossary { margin: 0.4rem 0 1rem; }
+.glossary dt {
+  font-family: 'PT Sans Narrow', 'PT Sans', sans-serif;
+  font-weight: 400;
+  color: #c62828;
+  font-size: 12pt;
+  margin-top: 0.7rem;
+}
+.glossary dd { margin: 0.12rem 0 0.2rem; }
+
+.content-block tr { page-break-inside: avoid; }
 
 .content-block hr {
   border: none;
@@ -195,15 +308,39 @@ body {
   margin: 1.25cm;
 }
 
-@media screen {
-  body { max-width: 210mm; margin: 0 auto; }
-  .doc-body { padding: 1.25rem 1.5rem 2rem; }
-  .diagram-page {
-    min-height: 70vh;
-    border: 1px dashed #ddd;
-    margin: 1.5rem 0;
-    background: #fefefe;
-  }
+html.pdf-capture .cover,
+html.pdf-capture .diagram-page {
+  min-height: 0;
+  break-before: auto;
+  break-after: auto;
+  page-break-before: auto;
+  page-break-after: auto;
+  margin: 0;
+  border: none;
+}
+
+.pdf-sheet .content-block { height: 100%; }
+.pdf-sheet .cover {
+  min-height: 100%;
+  height: 100%;
+  padding: 0;
+}
+.pdf-sheet .diagram-page {
+  min-height: 100%;
+  height: 100%;
+  padding: 0;
+  display: flex;
+}
+.pdf-sheet .diagram-frame svg {
+  max-height: 150mm;
+  max-width: 100%;
+}
+
+.budget-doc td:last-child,
+.budget-doc th:last-child {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 @media print {
@@ -247,49 +384,42 @@ function escapeHtml(text: string) {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
-function buildDocument(title: string, bodyHtml: string) {
-  const safeTitle = escapeHtml(title || 'arc42')
+function buildDocument(title: string, bodyHtml: string, kind = 'arc42', banner = true, bodyClass = '') {
+  const safeTitle = escapeHtml(title || kind)
+  const safeKind = escapeHtml(kind)
+  const header = banner ? `<p class="doc-header">${safeTitle}</p>` : ''
+  const mainClass = ['doc-body', bodyClass].filter(Boolean).join(' ')
   return `<!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="pdf-capture">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${safeTitle} — arc42</title>
+  <title>${safeTitle} — ${safeKind}</title>
   <style>${PRINT_STYLES}</style>
 </head>
 <body>
-  <div class="screen-toolbar">
-    <button type="button" class="secondary" onclick="window.close()">Cerrar</button>
-    <button type="button" onclick="window.print()">Guardar como PDF</button>
-  </div>
-  <main class="doc-body">
-    <p class="doc-header">${safeTitle}</p>
+  <main class="${mainClass}">
+    ${header}
     ${bodyHtml}
   </main>
-  <script>
-    window.addEventListener('load', function () {
-      var done = function () { setTimeout(function () { window.print(); }, 350); };
-      if (document.fonts && document.fonts.ready) {
-        document.fonts.ready.then(done);
-      } else {
-        done();
-      }
-    });
-  </script>
 </body>
 </html>`
 }
 
-/** Abre el arc42 estilizado; el usuario guarda como PDF desde el diálogo del navegador. */
+/** Descarga el arc42 como PDF, sin abrir otra ventana. */
 export async function exportArc42Pdf(documentTitle: string, markdown: string): Promise<void> {
   const bodyHtml = await buildBodyHtml(markdown)
-  const html = buildDocument(documentTitle, bodyHtml)
+  const title = documentTitle || 'arc42'
+  await downloadStyledPdf(buildDocument(title, bodyHtml, 'arc42'), pdfFilename(title, 'arc42'))
+}
 
-  const win = window.open('', '_blank')
-  if (!win) {
-    throw new Error('Permite ventanas emergentes para generar el PDF.')
-  }
-  win.document.open()
-  win.document.write(html)
-  win.document.close()
+/** Descarga el presupuesto como PDF, sin abrir otra ventana. */
+export async function exportPresupuestoPdf(documentTitle: string, markdown: string): Promise<void> {
+  const marked = await loadPrintMarked()
+  const html = await marked.parse(markdown)
+  const title = documentTitle || 'presupuesto'
+  await downloadStyledPdf(
+    buildDocument(title, `<div class="content-block">${html}</div>`, 'Presupuesto', false, 'budget-doc'),
+    pdfFilename(title, 'presupuesto'),
+  )
 }
