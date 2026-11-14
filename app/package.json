@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource/pt-sans": "^5.3.0",
     "@joint/core": "^4.3.4",
     "@tailwindcss/vite": "^4.3.5",
     "daisyui": "^5.8.0",

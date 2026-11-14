@@ -50,7 +50,7 @@ function MermaidBlock({ chart }: { chart: string }) {
 
 export function Arc42Preview({ markdown }: { markdown: string }) {
   return (
-    <div className="arc42-preview rounded-xl border border-base-300 bg-base-100 p-5 md:p-6 max-h-[32rem] overflow-y-auto text-sm leading-relaxed">
+    <article className="arc42-preview mx-auto w-full max-w-4xl rounded-xl border border-base-300 bg-base-100 p-6 text-[15px] leading-relaxed shadow-sm md:p-10">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
@@ -81,6 +81,6 @@ export function Arc42Preview({ markdown }: { markdown: string }) {
       >
         {markdown}
       </ReactMarkdown>
-    </div>
+    </article>
   )
 }

@@ -12,6 +12,7 @@ import {
   CircleDollarSign,
   Cloud,
   Download,
+  Eye,
   FileDown,
   FileText,
   FileUp,
@@ -29,6 +30,7 @@ import {
   Sparkles,
   Target,
   TriangleAlert,
+  X,
 } from 'lucide-react'
 
 const sizeMap = { sm: 'size-3.5', md: 'size-4', lg: 'size-5', xl: 'size-6' } as const
@@ -72,6 +74,7 @@ export {
   CircleDollarSign,
   Cloud,
   Download,
+  Eye,
   FileDown,
   FileText,
   FileUp,
@@ -81,6 +84,7 @@ export {
   Plus,
   RotateCcw,
   Sparkles,
+  X,
 }
 
 type AddButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -88,11 +92,11 @@ type AddButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   size?: 'sm' | 'md'
 }
 
-export function AddButton({ children, className, size = 'sm', ...rest }: AddButtonProps) {
+export function AddButton({ children, className, size = 'md', ...rest }: AddButtonProps) {
   return (
     <button
       type="button"
-      className={['btn btn-outline gap-2', size === 'sm' ? 'btn-sm' : '', className].filter(Boolean).join(' ')}
+      className={['btn btn-outline gap-2 self-end', size === 'sm' ? 'btn-sm' : '', className].filter(Boolean).join(' ')}
       {...rest}
     >
       <Plus className="size-4 shrink-0" aria-hidden />

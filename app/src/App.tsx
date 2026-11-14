@@ -23,6 +23,7 @@ import {
   CircleAlert,
   CircleCheck,
   CircleDollarSign,
+  Eye,
   FileDown,
   FileText,
   FileUp,
@@ -34,6 +35,7 @@ import {
   RotateCcw,
   Sparkles,
   STEP_ICONS,
+  X,
 } from './icons'
 import { documentoVacio } from '@nucleo/esquema.js'
 import { serviciosPorProveedor } from '@nucleo/catalogos-store.js'
@@ -223,6 +225,7 @@ export default function App() {
   const [exportandoPdf, setExportandoPdf] = useState(false)
   const [exportandoPresupuesto, setExportandoPresupuesto] = useState(false)
   const [confirmarReinicio, setConfirmarReinicio] = useState(false)
+  const [visorArc42, setVisorArc42] = useState(false)
   const archivoJson = useRef<HTMLInputElement>(null)
 
   const sugerencias = useMemo(() => sugerirParaDocumento(doc), [doc])
@@ -258,7 +261,17 @@ export default function App() {
 
   useEffect(() => {
     document.getElementById(`paso-nav-${step}`)?.scrollIntoView({ block: 'nearest' })
+    if (step !== 10) setVisorArc42(false)
   }, [step])
+
+  useEffect(() => {
+    if (!visorArc42) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setVisorArc42(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [visorArc42])
 
   const patch = useCallback((fn: (d: Doc) => void) => {
     setDoc((prev: Doc) => {
@@ -304,6 +317,7 @@ export default function App() {
     setStep(0)
     setSugerenciasPanelOpen(false)
     setEscenarioAEliminar(null)
+    setVisorArc42(false)
     setConfirmarReinicio(false)
     if (archivoJson.current) archivoJson.current.value = ''
   }
@@ -578,9 +592,7 @@ export default function App() {
                   </StackPanel>
                 )
                 )}
-                <div className="flex justify-end w-full">
                 <AddButton
-                  size="md"
                   onClick={() =>
                     patch((d) => {
                       d.arc42.escenariosCalidad = [
@@ -592,7 +604,6 @@ export default function App() {
                 >
                   Añadir escenario
                 </AddButton>
-                </div>
               </FormStack>
             )}
 
@@ -900,79 +911,87 @@ export default function App() {
                   stepIndex={10}
                   icon={STEP_ICONS[10]}
                   title="Validación y exportación"
-                  desc="Revisa el resultado del validador y exporta el entregable."
+                  desc="Revisa el resultado del validador, consulta el documento y exporta el entregable."
                 />
                 <CardValidation validation={validation} />
-                <div className="w-full min-w-0">
-                  <SectionTitle compact>
-                    <span className="inline-flex items-center gap-2 normal-case tracking-normal">
-                      <Download className="size-4" aria-hidden />
+                <div className="grid w-full min-w-0 gap-4 lg:grid-cols-2">
+                  <section className="flex min-w-0 flex-col rounded-2xl border border-base-300 bg-base-100 p-5 shadow-sm">
+                    <h3 className="inline-flex items-center gap-2 text-base font-semibold">
+                      <Download className="size-4 text-primary" aria-hidden />
                       Exportar
-                    </span>
-                  </SectionTitle>
-                  <Box className="join join-vertical w-full sm:join-horizontal sm:w-auto max-w-full">
+                    </h3>
+                    <p className="mt-1 text-sm leading-relaxed text-base-content/65">
+                      El JSON es la línea base. El Markdown y el PDF recogen el documento arc42; el presupuesto agrupa
+                      los servicios de nube seleccionados.
+                    </p>
+                    <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                      <button
+                        type="button"
+                        className="btn btn-primary w-full gap-2"
+                        onClick={() => download('arquitectura.json', JSON.stringify(doc, null, 2), 'application/json')}
+                      >
+                        <Braces className="size-4 shrink-0" aria-hidden />
+                        JSON
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-primary w-full gap-2"
+                        disabled={exportandoPresupuesto}
+                        onClick={() => void descargarPdfPresupuesto()}
+                      >
+                        {exportandoPresupuesto ? (
+                          <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
+                        ) : (
+                          <CircleDollarSign className="size-4 shrink-0" aria-hidden />
+                        )}
+                        {exportandoPresupuesto ? 'Generando…' : 'Presupuesto'}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-primary w-full gap-2"
+                        onClick={() => download('arc42.md', preview, 'text/markdown')}
+                      >
+                        <FileText className="size-4 shrink-0" aria-hidden />
+                        Markdown
+                      </button>
+                      <button
+                        type="button"
+                        className="btn w-full gap-2"
+                        disabled={exportandoPdf}
+                        onClick={() => void descargarPdfArc42()}
+                      >
+                        {exportandoPdf ? (
+                          <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
+                        ) : (
+                          <FileDown className="size-4 shrink-0" aria-hidden />
+                        )}
+                        {exportandoPdf ? 'Generando…' : 'PDF arc42'}
+                      </button>
+                    </div>
+                  </section>
+                  <section className="flex min-w-0 flex-col rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/[0.07] via-base-100 to-base-100 p-5 shadow-sm">
+                    <h3 className="inline-flex items-center gap-2 text-base font-semibold">
+                      <FileText className="size-4 text-primary" aria-hidden />
+                      Documento arc42
+                    </h3>
+                    <p className="mt-1 text-sm leading-relaxed text-base-content/65">
+                      Vista con las secciones del documento y los diagramas Mermaid. El PDF usa títulos en rojo, texto
+                      en negro y cada diagrama en una página horizontal.
+                    </p>
                     <button
                       type="button"
-                      className="btn btn-primary join-item w-full sm:w-auto gap-2"
-                      onClick={() => download('arquitectura.json', JSON.stringify(doc, null, 2), 'application/json')}
+                      className="btn btn-primary mt-4 w-full gap-2 sm:w-auto sm:self-start"
+                      onClick={() => setVisorArc42(true)}
                     >
-                      <Braces className="size-4 shrink-0" aria-hidden />
-                      Descargar JSON
+                      <Eye className="size-4 shrink-0" aria-hidden />
+                      Abrir visor
                     </button>
-                    <button
-                      type="button"
-                      className="btn btn-primary join-item w-full sm:w-auto gap-2"
-                      disabled={exportandoPresupuesto}
-                      onClick={() => void descargarPdfPresupuesto()}
-                    >
-                      {exportandoPresupuesto ? (
-                        <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
-                      ) : (
-                        <CircleDollarSign className="size-4 shrink-0" aria-hidden />
-                      )}
-                      {exportandoPresupuesto ? 'Generando PDF…' : 'PDF presupuesto'}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-primary join-item w-full sm:w-auto gap-2"
-                      onClick={() => download('arc42.md', preview, 'text/markdown')}
-                    >
-                      <FileText className="size-4 shrink-0" aria-hidden />
-                      Descargar Markdown
-                    </button>
-                    <button
-                      type="button"
-                      className="btn join-item w-full sm:w-auto gap-2"
-                      disabled={exportandoPdf}
-                      onClick={() => void descargarPdfArc42()}
-                    >
-                      {exportandoPdf ? (
-                        <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
-                      ) : (
-                        <FileDown className="size-4 shrink-0" aria-hidden />
-                      )}
-                      {exportandoPdf ? 'Generando PDF…' : 'Descargar PDF'}
-                    </button>
-                  </Box>
+                  </section>
                 </div>
                 <button type="button" className="btn btn-ghost btn-sm self-start gap-2" onClick={() => setStep(0)}>
                   <RotateCcw className="size-4 shrink-0" aria-hidden />
                   Volver al inicio para ajustes
                 </button>
-                <Field
-                  label="Vista previa arc42"
-                  hint="El PDF usa PT Sans / PT Sans Narrow (títulos en rojo), Fira Code en código y diagramas en página horizontal."
-                >
-                  <Suspense
-                    fallback={
-                      <div className="rounded-xl border border-base-300 bg-base-100 p-6 text-sm text-base-content/60">
-                        Cargando vista previa…
-                      </div>
-                    }
-                  >
-                    <Arc42Preview markdown={preview} />
-                  </Suspense>
-                </Field>
               </FormStack>
             )}
             </div>
@@ -1159,6 +1178,54 @@ export default function App() {
           </form>
         </dialog>
       ) : null}
+      {visorArc42 && step === 10 ? (
+        <dialog
+          className="modal modal-open"
+          aria-labelledby="visor-arc42-titulo"
+          onCancel={(e) => {
+            e.preventDefault()
+            setVisorArc42(false)
+          }}
+        >
+          <div className="modal-box visor-arc42 flex flex-col">
+            <header className="flex shrink-0 items-start justify-between gap-3 border-b border-base-300 px-5 py-4 md:px-6">
+              <div className="min-w-0">
+                <h3 id="visor-arc42-titulo" className="text-lg font-semibold">
+                  Documento arc42
+                </h3>
+                <p className="truncate text-sm text-base-content/60">
+                  {doc.meta?.nombreProyecto?.trim() || 'Sin nombre de proyecto'}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-sm btn-ghost btn-square shrink-0"
+                aria-label="Cerrar visor"
+                autoFocus
+                onClick={() => setVisorArc42(false)}
+              >
+                <X className="size-4" aria-hidden />
+              </button>
+            </header>
+            <div className="min-h-0 flex-1 overflow-y-auto bg-base-200/70 px-4 py-5 md:px-8 md:py-6">
+              <Suspense
+                fallback={
+                  <div className="mx-auto max-w-4xl rounded-xl border border-base-300 bg-base-100 p-6 text-sm text-base-content/60">
+                    Cargando vista previa…
+                  </div>
+                }
+              >
+                <Arc42Preview markdown={preview} />
+              </Suspense>
+            </div>
+          </div>
+          <form method="dialog" className="modal-backdrop">
+            <button type="button" aria-label="Cerrar visor" onClick={() => setVisorArc42(false)}>
+              cerrar
+            </button>
+          </form>
+        </dialog>
+      ) : null}
       {confirmarReinicio ? (
         <dialog
           className="modal modal-open"
@@ -1214,7 +1281,7 @@ function CardValidation({
   validation: { valido: boolean; errores: string[]; advertencias: string[] }
 }) {
   return (
-    <div role="alert" className={`alert ${validation.valido ? 'alert-success' : 'alert-error'} mb-4`}>
+    <div role="alert" className={`alert ${validation.valido ? 'alert-success' : 'alert-error'}`}>
       {validation.valido ? (
         <CircleCheck className="size-6 shrink-0" aria-hidden />
       ) : (

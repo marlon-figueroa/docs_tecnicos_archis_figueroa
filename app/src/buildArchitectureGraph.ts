@@ -1,5 +1,10 @@
 import type { dia, shapes } from '@joint/core'
 import { servicioPorId } from '@nucleo/catalogos-store.js'
+import { DIAGRAM_FONT } from './ptSansFont'
+
+function diagramLabel(attrs: Record<string, string | number>) {
+  return { fontFamily: DIAGRAM_FONT, ...attrs }
+}
 
 const PRIMARY = '#5f27cd'
 const PRIMARY_DARK = '#4a1fa8'
@@ -52,7 +57,7 @@ function laneLabel(shapes: GraphShapes, x: number, y: number, text: string, widt
     size: { width, height: 28 },
     attrs: {
       body: { fill: 'transparent', stroke: 'transparent' },
-      label: {
+      label: diagramLabel({
         text: text.toUpperCase(),
         fill: LABEL_FILL,
         fontSize: 11,
@@ -62,7 +67,7 @@ function laneLabel(shapes: GraphShapes, x: number, y: number, text: string, widt
         textVerticalAnchor: 'middle',
         refX: 0,
         refY: '50%',
-      },
+      }),
     },
     meta: { tipo: 'decoracion', titulo: text } satisfies CellMeta,
   })
@@ -201,7 +206,7 @@ export function buildArchitectureGraph(doc: any, shapes: GraphShapes): GraphBuil
         size: { width: cloudWidth * 0.62, height: 32 },
         attrs: {
           body: { fill: 'transparent', stroke: 'transparent' },
-          label: { text: proyecto, fill: '#111', fontSize: 16, fontWeight: 700, refX: 0, refY: '50%' },
+          label: diagramLabel({ text: proyecto, fill: '#111', fontSize: 16, fontWeight: 700, refX: 0, refY: '50%' }),
         },
         meta: { tipo: 'decoracion', titulo: proyecto } satisfies CellMeta,
       })
@@ -222,7 +227,7 @@ export function buildArchitectureGraph(doc: any, shapes: GraphShapes): GraphBuil
         rx: 14,
         ry: 14,
       },
-      label: {
+      label: diagramLabel({
         text: `Nube · ${proveedor}`,
         fill: PRIMARY,
         fontSize: 11,
@@ -230,7 +235,7 @@ export function buildArchitectureGraph(doc: any, shapes: GraphShapes): GraphBuil
         refX: '50%',
         refY: 16,
         textAnchor: 'middle',
-      },
+      }),
     },
     meta: { tipo: 'decoracion', titulo: `Nube ${proveedor}` } satisfies CellMeta,
   })
@@ -246,13 +251,13 @@ export function buildArchitectureGraph(doc: any, shapes: GraphShapes): GraphBuil
       size: { width: NODE_W, height: NODE_H },
       attrs: {
         body: { fill: PRIMARY, stroke: PRIMARY_DARK, strokeWidth: 1.5, rx: 8, ry: 8 },
-        label: {
+        label: diagramLabel({
           text: sub ? `${lineWrap(b.nombre, 24, 1)}\n${sub}` : lineWrap(b.nombre, 24, 2),
           fill: PRIMARY_TEXT,
           fontSize: 11,
           fontWeight: 600,
           lineHeight: 15,
-        },
+        }),
       },
       meta: {
         tipo: 'contenedor',
@@ -271,7 +276,11 @@ export function buildArchitectureGraph(doc: any, shapes: GraphShapes): GraphBuil
         size: { width: 320, height: NODE_H },
         attrs: {
           body: { fill: '#f5f5f5', stroke: '#ccc', strokeDasharray: '6 4', rx: 8 },
-          label: { text: 'Añade contenedores C4\nen «Estrategia y bloques»', fill: '#555', fontSize: 11 },
+          label: diagramLabel({
+            text: 'Añade contenedores C4\nen «Estrategia y bloques»',
+            fill: '#555',
+            fontSize: 11,
+          }),
         },
         meta: { tipo: 'decoracion', titulo: 'Sin contenedores' } satisfies CellMeta,
       })
@@ -293,7 +302,7 @@ export function buildArchitectureGraph(doc: any, shapes: GraphShapes): GraphBuil
       size: { width: NODE_W, height: NODE_H },
       attrs: {
         body: { fill: ACTOR_FILL, stroke: PRIMARY, strokeWidth: 1.5 },
-        label: { text: lineWrap(a.nombre, 22, 2), fill: '#111', fontSize: 11, fontWeight: 600 },
+        label: diagramLabel({ text: lineWrap(a.nombre, 22, 2), fill: '#111', fontSize: 11, fontWeight: 600 }),
       },
       meta: { tipo: 'actor', titulo: a.nombre, detalle: a.descripcion } satisfies CellMeta,
     })
@@ -311,7 +320,7 @@ export function buildArchitectureGraph(doc: any, shapes: GraphShapes): GraphBuil
       size: { width: NODE_W, height: NODE_H },
       attrs: {
         body: { fill: EXTERNAL_FILL, stroke: '#ef6c00', strokeWidth: 1.5, rx: 8 },
-        label: { text: lineWrap(ex.nombre, 22, 2), fill: '#333', fontSize: 10, fontWeight: 600 },
+        label: diagramLabel({ text: lineWrap(ex.nombre, 22, 2), fill: '#333', fontSize: 10, fontWeight: 600 }),
       },
       meta: { tipo: 'externo', titulo: ex.nombre, detalle: ex.descripcion } satisfies CellMeta,
     })
@@ -335,7 +344,13 @@ export function buildArchitectureGraph(doc: any, shapes: GraphShapes): GraphBuil
         size: { width: 160, height: 16 },
         attrs: {
           body: { fill: 'transparent', stroke: 'transparent' },
-          label: { text: 'Servicios de la plataforma', fill: '#2e7d32', fontSize: 10, fontWeight: 700, refX: 0 },
+          label: diagramLabel({
+            text: 'Servicios de la plataforma',
+            fill: '#2e7d32',
+            fontSize: 10,
+            fontWeight: 700,
+            refX: 0,
+          }),
         },
         meta: { tipo: 'decoracion', titulo: 'Servicios' } satisfies CellMeta,
       })
@@ -352,7 +367,7 @@ export function buildArchitectureGraph(doc: any, shapes: GraphShapes): GraphBuil
         size: { width: svcW, height: svcH },
         attrs: {
           body: { fill: SERVICE_FILL, stroke: '#43a047', strokeWidth: 1, rx: 6 },
-          label: { text: lineWrap(name, 18, 2), fill: '#1b5e20', fontSize: 10, lineHeight: 13 },
+          label: diagramLabel({ text: lineWrap(name, 18, 2), fill: '#1b5e20', fontSize: 10, lineHeight: 13 }),
         },
         meta: {
           tipo: 'servicio',

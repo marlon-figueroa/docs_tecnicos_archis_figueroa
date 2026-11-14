@@ -1,8 +1,39 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ZoomIn, ZoomOut, Maximize2, Hand } from 'lucide-react'
+import { ZoomIn, ZoomOut, Maximize2, Hand, Download } from 'lucide-react'
 import type { dia, shapes as JointShapes } from '@joint/core'
 import type { CellMeta } from './buildArchitectureGraph'
 import { buildArchitectureGraph } from './buildArchitectureGraph'
+import { ensurePtSans, ptSansSvgCss } from './ptSansFont'
+
+type RectLike = { x: number; y: number; width: number; height: number }
+
+function unionSvgBBox(nodes: SVGGraphicsElement[]): RectLike | null {
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+  for (const node of nodes) {
+    const box = node.getBBox()
+    if (!Number.isFinite(box.x) || (!box.width && !box.height)) continue
+    minX = Math.min(minX, box.x)
+    minY = Math.min(minY, box.y)
+    maxX = Math.max(maxX, box.x + box.width)
+    maxY = Math.max(maxY, box.y + box.height)
+  }
+  if (!Number.isFinite(minX)) return null
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
+}
+
+function unionRects(a: RectLike, b: RectLike): RectLike {
+  const x = Math.min(a.x, b.x)
+  const y = Math.min(a.y, b.y)
+  return {
+    x,
+    y,
+    width: Math.max(a.x + a.width, b.x + b.width) - x,
+    height: Math.max(a.y + a.height, b.y + b.height) - y,
+  }
+}
 
 type ArchitectureDiagramProps = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -56,6 +87,82 @@ export function ArchitectureDiagram({ doc }: ArchitectureDiagramProps) {
     scaleRef.current = s
     setScale(s)
     userAdjustedRef.current = false
+  }
+
+  const downloadSvg = async () => {
+    const paper = paperRef.current
+    if (!paper || !graphRef.current?.getCells().length) return
+    const fontCss = await ptSansSvgCss()
+
+    // Coordenadas locales del modelo. getContentBBox está en píxeles del visor
+    // (ya escalado) y recorta el archivo al encuadre de la pantalla.
+    const model = paper.getContentArea({ useModelGeometry: true })
+    const rendered = unionSvgBBox(
+      ['.joint-back-layer', '.joint-labels-layer', '.joint-front-layer']
+        .map((selector) => paper.svg.querySelector(selector))
+        .filter((node): node is SVGGraphicsElement => node instanceof SVGGraphicsElement),
+    )
+    const bbox = rendered ? unionRects(model, rendered) : model
+    if (!bbox.width || !bbox.height) return
+
+    const pad = 48
+    const x = bbox.x - pad
+    const y = bbox.y - pad
+    const width = bbox.width + pad * 2
+    const height = bbox.height + pad * 2
+    const clone = paper.svg.cloneNode(true) as SVGSVGElement
+    clone.querySelector('.joint-grid-layer')?.remove()
+    clone.querySelector('.joint-tools-layer')?.remove()
+    clone.querySelector('.joint-layers')?.removeAttribute('transform')
+
+    const svgNs = 'http://www.w3.org/2000/svg'
+    const background = document.createElementNS(svgNs, 'rect')
+    background.setAttribute('x', String(x))
+    background.setAttribute('y', String(y))
+    background.setAttribute('width', String(width))
+    background.setAttribute('height', String(height))
+    background.setAttribute('fill', '#fbf9ff')
+    const fontStyle = document.createElementNS(svgNs, 'style')
+    fontStyle.setAttribute('type', 'text/css')
+    fontStyle.textContent = fontCss
+    clone.querySelectorAll('text, tspan').forEach((node) => {
+      node.setAttribute('font-family', 'PT Sans, sans-serif')
+    })
+
+    const defs = clone.querySelector('defs')
+    if (defs) defs.prepend(fontStyle)
+    else clone.prepend(fontStyle)
+    if (defs?.nextSibling) clone.insertBefore(background, defs.nextSibling)
+    else clone.insertBefore(background, clone.firstChild)
+
+    clone.removeAttribute('style')
+    clone.removeAttribute('id')
+    clone.removeAttribute('joint-selector')
+    clone.setAttribute('overflow', 'visible')
+    clone.setAttribute('xmlns', svgNs)
+    clone.setAttribute('width', String(Math.ceil(width)))
+    clone.setAttribute('height', String(Math.ceil(height)))
+    clone.setAttribute('viewBox', `${x} ${y} ${width} ${height}`)
+
+    const nombre = String(doc.meta?.nombreProyecto || 'arquitectura')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 48) || 'arquitectura'
+    const blob = new Blob(
+      [`<?xml version="1.0" encoding="UTF-8"?>\n${new XMLSerializer().serializeToString(clone)}`],
+      { type: 'image/svg+xml;charset=utf-8' },
+    )
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${nombre}-arquitectura.svg`
+    link.rel = 'noopener'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 2000)
   }
 
   const zoomBy = (factor: number) => {
@@ -124,18 +231,27 @@ export function ArchitectureDiagram({ doc }: ArchitectureDiagramProps) {
 
   useEffect(() => {
     if (!ready) return
-    const graph = graphRef.current
-    const shapes = shapesRef.current
-    const paper = paperRef.current
-    const host = hostRef.current
-    if (!graph || !shapes || !paper || !host) return
+    let cancelled = false
+    let frame = 0
 
-    const { cells } = buildArchitectureGraph(doc, shapes)
-    graph.resetCells(cells)
-    userAdjustedRef.current = false
+    void ensurePtSans().then(() => {
+      if (cancelled) return
+      const graph = graphRef.current
+      const shapes = shapesRef.current
+      const paper = paperRef.current
+      const host = hostRef.current
+      if (!graph || !shapes || !paper || !host) return
 
-    const frame = requestAnimationFrame(() => fit())
-    return () => cancelAnimationFrame(frame)
+      const { cells } = buildArchitectureGraph(doc, shapes)
+      graph.resetCells(cells)
+      userAdjustedRef.current = false
+      frame = requestAnimationFrame(() => fit())
+    })
+
+    return () => {
+      cancelled = true
+      cancelAnimationFrame(frame)
+    }
     // diagramKey resume los campos que cambian el grafo; ready evita pintar antes de JointJS
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [diagramKey, ready])
@@ -232,6 +348,10 @@ export function ArchitectureDiagram({ doc }: ArchitectureDiagramProps) {
               <Maximize2 className="size-3.5" aria-hidden />
             </button>
           </div>
+          <button type="button" className="btn btn-xs gap-1" title="Descargar SVG" onClick={() => void downloadSvg()} disabled={!ready}>
+            <Download className="size-3.5" aria-hidden />
+            SVG
+          </button>
           <span className="hidden sm:inline-flex items-center gap-1 text-xs text-base-content/45">
             <Hand className="size-3.5" aria-hidden />
             Pan
