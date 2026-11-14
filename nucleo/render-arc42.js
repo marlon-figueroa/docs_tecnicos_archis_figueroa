@@ -125,7 +125,11 @@ export function renderArc42Markdown(doc) {
 
   sections.push(`## 10. Requisitos de calidad\n\n${mdEscenariosCalidad(a.escenariosCalidad)}`);
 
-  sections.push(`## 11. Riesgos y deuda técnica\n\n${(a.riesgos || []).map((r) => `- **${r.titulo}** (${r.severidad || 'media'}): ${r.descripcion}${r.relacionControl ? ` (control: ${r.relacionControl})` : ''}`).join('\n') || '_Sin riesgos_'}\n`);
+  sections.push(`## 11. Riesgos y deuda técnica\n\n${(a.riesgos || []).map((r) => {
+    const causa = r.causa ? ` Causa: ${r.causa}.` : '';
+    const control = r.relacionControl ? ` (control: ${r.relacionControl})` : '';
+    return `- **${r.titulo}** (${r.severidad || 'media'}): ${r.descripcion || ''}${causa}${control}`;
+  }).join('\n') || '_Sin riesgos_'}\n`);
 
   sections.push(`## 12. Glosario\n${mdList(a.glosario || [])}`);
 

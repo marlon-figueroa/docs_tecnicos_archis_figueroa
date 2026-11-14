@@ -203,6 +203,17 @@ function PilarAccordion({
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Doc = any
 
+function nombrePendienteEliminar(doc: Doc, objetivo: { tipo: 'escenario' | 'adr' | 'riesgo'; idx: number }) {
+  if (objetivo.tipo === 'adr') {
+    const adr = doc.arc42.decisiones?.[objetivo.idx]
+    return adr?.titulo?.trim() || adr?.id || `ADR ${objetivo.idx + 1}`
+  }
+  if (objetivo.tipo === 'riesgo') {
+    return doc.arc42.riesgos?.[objetivo.idx]?.titulo?.trim() || `Riesgo ${objetivo.idx + 1}`
+  }
+  return doc.arc42.escenariosCalidad?.[objetivo.idx]?.nombre?.trim() || `Escenario ${objetivo.idx + 1}`
+}
+
 function download(filename: string, content: string, type: string) {
   const blob = new Blob([content], { type })
   const url = URL.createObjectURL(blob)
@@ -221,7 +232,9 @@ export default function App() {
     return d
   })
   const [sugerenciasPanelOpen, setSugerenciasPanelOpen] = useState(false)
-  const [escenarioAEliminar, setEscenarioAEliminar] = useState<number | null>(null)
+  const [pendienteEliminar, setPendienteEliminar] = useState<
+    { tipo: 'escenario' | 'adr' | 'riesgo'; idx: number } | null
+  >(null)
   const [exportandoPdf, setExportandoPdf] = useState(false)
   const [exportandoPresupuesto, setExportandoPresupuesto] = useState(false)
   const [confirmarReinicio, setConfirmarReinicio] = useState(false)
@@ -239,6 +252,15 @@ export default function App() {
 
   const validation = useMemo(() => validarDocumento(doc), [doc])
   const preview = useMemo(() => renderArc42Markdown(doc), [doc])
+  const controlesWaf = useMemo((): { pilar: string; controles: { id: string; texto: string }[] }[] => {
+    const pilares = (doc.evaluacionWellArchitected?.pilares || []) as {
+      pilar: string
+      controles?: { id: string; texto: string }[]
+    }[]
+    return pilares
+      .map((p) => ({ pilar: p.pilar, controles: p.controles || [] }))
+      .filter((p) => p.controles.length > 0)
+  }, [doc.evaluacionWellArchitected])
   const evalResumen = useMemo(() => resumenEvaluacion(doc), [doc])
 
   const proveedor = doc.meta?.proveedorNube || 'aws'
@@ -316,7 +338,7 @@ export default function App() {
     setDoc(d)
     setStep(0)
     setSugerenciasPanelOpen(false)
-    setEscenarioAEliminar(null)
+    setPendienteEliminar(null)
     setVisorArc42(false)
     setConfirmarReinicio(false)
     if (archivoJson.current) archivoJson.current.value = ''
@@ -560,7 +582,7 @@ export default function App() {
                     key={idx}
                     title={`Escenario ${idx + 1}`}
                     badge={`Q${idx + 1}`}
-                    onRemove={() => setEscenarioAEliminar(idx)}
+                    onRemove={() => setPendienteEliminar({ tipo: 'escenario', idx })}
                   >
                     <Field label="Nombre">
                       <TextInput
@@ -841,61 +863,187 @@ export default function App() {
                   stepIndex={8}
                   icon={STEP_ICONS[8]}
                   title="ADRs y riesgos"
-                  desc="Documenta decisiones y riesgos ligados a brechas de controles."
+                  desc="Cada decisión lleva estado, contexto, decisión y consecuencias. Cada riesgo lleva severidad, causa y el control que cubre."
                 />
+                <SectionTitle compact>Decisiones de arquitectura</SectionTitle>
+                {(doc.arc42.decisiones || []).length === 0 ? (
+                  <p className="text-sm text-base-content/60 border border-dashed border-base-300 rounded-xl px-4 py-6 text-center">
+                    No hay decisiones. Un diseño híbrido necesita un ADR que justifique el cruce entre nubes.
+                  </p>
+                ) : null}
                 {(doc.arc42.decisiones || []).map(
-                  (adr: { id: string; titulo: string }, idx: number) => (
-                    <StackPanel key={adr.id || idx} title="Decisión de arquitectura" badge={adr.id || `ADR ${idx + 1}`}>
+                  (
+                    adr: {
+                      id: string
+                      titulo: string
+                      estado: string
+                      contexto: string
+                      decision: string
+                      consecuencias: string
+                    },
+                    idx: number,
+                  ) => (
+                    <StackPanel
+                      key={`${adr.id || 'adr'}-${idx}`}
+                      title={adr.titulo?.trim() || 'Decisión de arquitectura'}
+                      badge={adr.id || `ADR ${idx + 1}`}
+                      onRemove={() => setPendienteEliminar({ tipo: 'adr', idx })}
+                    >
+                      <FormRow>
+                        <Field label="Identificador">
+                          <TextInput
+                            value={adr.id || ''}
+                            onChange={(e) => patch((d) => (d.arc42.decisiones[idx].id = e.target.value))}
+                            placeholder="ADR-001"
+                          />
+                        </Field>
+                        <Field label="Estado">
+                          <SelectInput
+                            value={adr.estado || 'propuesto'}
+                            onChange={(e) => patch((d) => (d.arc42.decisiones[idx].estado = e.target.value))}
+                          >
+                            <option value="propuesto">Propuesto</option>
+                            <option value="aceptada">Aceptada</option>
+                            <option value="rechazada">Rechazada</option>
+                            <option value="obsoleta">Obsoleta</option>
+                          </SelectInput>
+                        </Field>
+                      </FormRow>
                       <Field label="Título">
-                        <TextInput value={adr.titulo} onChange={(e) => patch((d) => (d.arc42.decisiones[idx].titulo = e.target.value))} />
+                        <TextInput
+                          value={adr.titulo || ''}
+                          onChange={(e) => patch((d) => (d.arc42.decisiones[idx].titulo = e.target.value))}
+                          placeholder="Qué se decidió, en una frase"
+                        />
+                      </Field>
+                      <Field label="Contexto" hint="Fuerzas y restricciones que obligan a decidir">
+                        <TextArea
+                          value={adr.contexto || ''}
+                          onChange={(e) => patch((d) => (d.arc42.decisiones[idx].contexto = e.target.value))}
+                        />
+                      </Field>
+                      <Field label="Decisión" hint="La opción elegida y, si aplica, las descartadas">
+                        <TextArea
+                          value={adr.decision || ''}
+                          onChange={(e) => patch((d) => (d.arc42.decisiones[idx].decision = e.target.value))}
+                        />
+                      </Field>
+                      <Field label="Consecuencias" hint="Coste, deuda o efectos que acepta el diseño">
+                        <TextArea
+                          value={adr.consecuencias || ''}
+                          onChange={(e) => patch((d) => (d.arc42.decisiones[idx].consecuencias = e.target.value))}
+                        />
                       </Field>
                     </StackPanel>
-                  )
+                  ),
                 )}
                 <AddButton
                   onClick={() =>
                     patch((d) => {
+                      const previas = d.arc42.decisiones || []
+                      const ids = new Set(previas.map((item: { id?: string }) => item.id))
+                      let n = previas.length + 1
+                      let id = `ADR-${String(n).padStart(3, '0')}`
+                      while (ids.has(id)) {
+                        n += 1
+                        id = `ADR-${String(n).padStart(3, '0')}`
+                      }
                       d.arc42.decisiones = [
-                        ...(d.arc42.decisiones || []),
-                        {
-                          id: `ADR-${String((d.arc42.decisiones?.length || 0) + 1).padStart(3, '0')}`,
-                          titulo: '',
-                          estado: 'propuesto',
-                          contexto: '',
-                          decision: '',
-                          consecuencias: '',
-                        },
+                        ...previas,
+                        { id, titulo: '', estado: 'propuesto', contexto: '', decision: '', consecuencias: '' },
                       ]
                     })
                   }
                 >
                   Añadir ADR
                 </AddButton>
-                <SectionTitle compact>Riesgos</SectionTitle>
-                <div className="flex flex-col gap-4 w-full min-w-0">
-                {(doc.arc42.riesgos || []).map((r: { titulo: string; relacionControl: string }, idx: number) => (
-                  <FormRow key={idx}>
-                    <Field label="Título del riesgo">
-                      <TextInput
-                        value={r.titulo}
-                        onChange={(e) => patch((d) => (d.arc42.riesgos[idx].titulo = e.target.value))}
-                      />
-                    </Field>
-                    <Field label="Control relacionado" hint="Ej. REL-02">
-                      <TextInput
-                        value={r.relacionControl || ''}
-                        onChange={(e) => patch((d) => (d.arc42.riesgos[idx].relacionControl = e.target.value))}
-                      />
-                    </Field>
-                  </FormRow>
-                ))}
-                </div>
+                <SectionTitle compact>Riesgos y deuda técnica</SectionTitle>
+                {(doc.arc42.riesgos || []).length === 0 ? (
+                  <p className="text-sm text-base-content/60 border border-dashed border-base-300 rounded-xl px-4 py-6 text-center">
+                    No hay riesgos. Cada brecha de Well-Architected debe tener un riesgo con su control.
+                  </p>
+                ) : null}
+                {(doc.arc42.riesgos || []).map(
+                  (
+                    r: {
+                      titulo: string
+                      severidad: string
+                      descripcion: string
+                      causa: string
+                      relacionControl: string
+                    },
+                    idx: number,
+                  ) => {
+                    const controlActual = r.relacionControl || ''
+                    const conocido = controlesWaf.some((grupo) => grupo.controles.some((c) => c.id === controlActual))
+                    return (
+                      <StackPanel
+                        key={`riesgo-${idx}`}
+                        title={r.titulo?.trim() || `Riesgo ${idx + 1}`}
+                        badge={r.severidad || 'media'}
+                        onRemove={() => setPendienteEliminar({ tipo: 'riesgo', idx })}
+                      >
+                        <FormRow>
+                          <Field label="Título">
+                            <TextInput
+                              value={r.titulo || ''}
+                              onChange={(e) => patch((d) => (d.arc42.riesgos[idx].titulo = e.target.value))}
+                              placeholder="Qué puede fallar"
+                            />
+                          </Field>
+                          <Field label="Severidad">
+                            <SelectInput
+                              value={r.severidad || 'media'}
+                              onChange={(e) => patch((d) => (d.arc42.riesgos[idx].severidad = e.target.value))}
+                            >
+                              <option value="baja">Baja</option>
+                              <option value="media">Media</option>
+                              <option value="alta">Alta</option>
+                            </SelectInput>
+                          </Field>
+                        </FormRow>
+                        <Field label="Descripción" hint="Impacto si el riesgo se materializa">
+                          <TextArea
+                            value={r.descripcion || ''}
+                            onChange={(e) => patch((d) => (d.arc42.riesgos[idx].descripcion = e.target.value))}
+                          />
+                        </Field>
+                        <Field label="Causa" hint="Por qué existe hoy">
+                          <TextArea
+                            value={r.causa || ''}
+                            onChange={(e) => patch((d) => (d.arc42.riesgos[idx].causa = e.target.value))}
+                          />
+                        </Field>
+                        <Field label="Control relacionado" hint="El identificador debe coincidir con la brecha, por ejemplo REL-02">
+                          <SelectInput
+                            value={controlActual}
+                            onChange={(e) => patch((d) => (d.arc42.riesgos[idx].relacionControl = e.target.value))}
+                          >
+                            <option value="">Sin control</option>
+                            {controlActual && !conocido ? (
+                              <option value={controlActual}>{controlActual}</option>
+                            ) : null}
+                            {controlesWaf.map((grupo) => (
+                              <optgroup key={grupo.pilar} label={labelPilar(grupo.pilar)}>
+                                {grupo.controles.map((c) => (
+                                  <option key={c.id} value={c.id}>
+                                    {c.id} — {c.texto}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            ))}
+                          </SelectInput>
+                        </Field>
+                      </StackPanel>
+                    )
+                  },
+                )}
                 <AddButton
                   onClick={() =>
                     patch((d) => {
                       d.arc42.riesgos = [
                         ...(d.arc42.riesgos || []),
-                        { titulo: '', severidad: 'media', descripcion: '', relacionControl: '' },
+                        { titulo: '', severidad: 'media', descripcion: '', causa: '', relacionControl: '' },
                       ]
                     })
                   }
@@ -1129,42 +1277,52 @@ export default function App() {
           </div>
         </aside>
       </div>
-      {escenarioAEliminar !== null ? (
+      {pendienteEliminar ? (
         <dialog
           className="modal modal-open"
-          aria-labelledby="confirmar-eliminar-escenario"
+          aria-labelledby="confirmar-eliminar"
           onCancel={(e) => {
             e.preventDefault()
-            setEscenarioAEliminar(null)
+            setPendienteEliminar(null)
           }}
         >
           <div className="modal-box">
-            <h3 id="confirmar-eliminar-escenario" className="font-semibold text-lg">
-              Eliminar escenario
+            <h3 id="confirmar-eliminar" className="font-semibold text-lg">
+              {pendienteEliminar.tipo === 'adr'
+                ? 'Eliminar decisión'
+                : pendienteEliminar.tipo === 'riesgo'
+                  ? 'Eliminar riesgo'
+                  : 'Eliminar escenario'}
             </h3>
             <p className="py-3 text-sm text-base-content/75 leading-relaxed">
-              ¿Eliminar{' '}
-              <strong>
-                {doc.arc42.escenariosCalidad?.[escenarioAEliminar]?.nombre?.trim() ||
-                  `Escenario ${escenarioAEliminar + 1}`}
-              </strong>
-              ? Esta acción no se puede deshacer.
+              ¿Eliminar <strong>{nombrePendienteEliminar(doc, pendienteEliminar)}</strong>? Esta acción no se puede
+              deshacer.
             </p>
             <div className="modal-action">
-              <button type="button" className="btn" onClick={() => setEscenarioAEliminar(null)}>
+              <button type="button" className="btn" onClick={() => setPendienteEliminar(null)}>
                 Cancelar
               </button>
               <button
                 type="button"
                 className="btn btn-error"
                 onClick={() => {
-                  const idx = escenarioAEliminar
+                  const objetivo = pendienteEliminar
                   patch((d) => {
-                    d.arc42.escenariosCalidad = (d.arc42.escenariosCalidad || []).filter(
-                      (_: unknown, i: number) => i !== idx
-                    )
+                    if (objetivo.tipo === 'escenario') {
+                      d.arc42.escenariosCalidad = (d.arc42.escenariosCalidad || []).filter(
+                        (_: unknown, i: number) => i !== objetivo.idx,
+                      )
+                    } else if (objetivo.tipo === 'adr') {
+                      d.arc42.decisiones = (d.arc42.decisiones || []).filter(
+                        (_: unknown, i: number) => i !== objetivo.idx,
+                      )
+                    } else {
+                      d.arc42.riesgos = (d.arc42.riesgos || []).filter(
+                        (_: unknown, i: number) => i !== objetivo.idx,
+                      )
+                    }
                   })
-                  setEscenarioAEliminar(null)
+                  setPendienteEliminar(null)
                 }}
               >
                 Eliminar
@@ -1172,7 +1330,7 @@ export default function App() {
             </div>
           </div>
           <form method="dialog" className="modal-backdrop">
-            <button type="button" aria-label="Cancelar eliminación" onClick={() => setEscenarioAEliminar(null)}>
+            <button type="button" aria-label="Cancelar eliminación" onClick={() => setPendienteEliminar(null)}>
               cerrar
             </button>
           </form>
