@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useMemo, useState, type ComponentProps } from 'react'
 import { initCatalogos } from './initCatalogos'
 import {
   ChoiceChip,
@@ -15,13 +15,34 @@ import {
   TextArea,
   TextInput,
 } from './ui'
+import {
+  AddButton,
+  Braces,
+  ChevronLeft,
+  ChevronRight,
+  CircleAlert,
+  CircleCheck,
+  FileDown,
+  FileText,
+  FileUp,
+  Icon,
+  Layers,
+  Download,
+  Loader2,
+  Menu,
+  RotateCcw,
+  Sparkles,
+  STEP_ICONS,
+} from './icons'
 import { documentoVacio } from '@nucleo/esquema.js'
 import { serviciosPorProveedor } from '@nucleo/catalogos-store.js'
 import { aplicarSugerencias, sugerirParaDocumento } from '@nucleo/sugerir.js'
 import { inicializarEvaluacion, resumenEvaluacion } from '@nucleo/evaluar-waf.js'
 import { validarDocumento } from '@nucleo/validar.js'
 import { renderArc42Markdown } from '@nucleo/render-arc42.js'
-import { Arc42Preview } from './Arc42Preview'
+import { SuggestionsPanel, type SugerenciasPreview } from './SuggestionsPanel'
+
+const Arc42Preview = lazy(() => import('./Arc42Preview').then((m) => ({ default: m.Arc42Preview })))
 
 initCatalogos()
 
@@ -30,6 +51,7 @@ const PASOS = [
   'Restricciones y contexto',
   'Escenarios de calidad',
   'Estrategia y bloques',
+  'Diagrama de arquitectura',
   'Ejecución y despliegue',
   'Nube',
   'Patrones',
@@ -37,6 +59,17 @@ const PASOS = [
   'Decisiones y riesgos',
   'Validación y exportación',
 ]
+
+const ArchitectureDiagram = lazy(() =>
+  import('./ArchitectureDiagram').then((m) => ({ default: m.ArchitectureDiagram }))
+)
+
+function PasoHeader({
+  stepIndex,
+  ...props
+}: { stepIndex: number } & Omit<ComponentProps<typeof StepHeader>, 'stepIndex' | 'stepTotal'>) {
+  return <StepHeader stepIndex={stepIndex} stepTotal={PASOS.length} {...props} />
+}
 
 const CONTEXT_KEYS: { key: string; label: string }[] = [
   { key: 'cargaVariable', label: 'Carga variable' },
@@ -95,7 +128,17 @@ export default function App() {
     inicializarEvaluacion(d)
     return d
   })
-  const [sugerencias, setSugerencias] = useState<ReturnType<typeof sugerirParaDocumento> | null>(null)
+  const [sugerenciasPanelOpen, setSugerenciasPanelOpen] = useState(false)
+  const [exportandoPdf, setExportandoPdf] = useState(false)
+
+  const sugerencias = useMemo(() => sugerirParaDocumento(doc), [doc])
+
+  const perfilActivo = useMemo(
+    () => CONTEXT_KEYS.filter(({ key }) => !!doc.contextoNegocio?.[key]).map(({ label }) => ({ label })),
+    [doc.contextoNegocio]
+  )
+
+  const sugerenciasTotal = sugerencias.patrones.length + sugerencias.antipatrones.length + sugerencias.servicios.length
 
   const validation = useMemo(() => validarDocumento(doc), [doc])
   const preview = useMemo(() => renderArc42Markdown(doc), [doc])
@@ -127,10 +170,6 @@ export default function App() {
     })
   }, [])
 
-  useEffect(() => {
-    setSugerencias(sugerirParaDocumento(doc))
-  }, [doc.contextoNegocio, doc.meta?.proveedorNube])
-
   const toggleServicio = (id: string) => {
     patch((d) => {
       const set = new Set(d.nube?.serviciosSeleccionados || [])
@@ -141,9 +180,16 @@ export default function App() {
   }
 
   const aplicarSugerenciasClick = () => {
-    const { documento, sugerencias: s } = aplicarSugerencias(structuredClone(doc))
+    const { documento } = aplicarSugerencias(structuredClone(doc))
     setDoc(documento)
-    setSugerencias(s as ReturnType<typeof sugerirParaDocumento>)
+    setSugerenciasPanelOpen(false)
+  }
+
+  const irAPaso = (idx: number) => {
+    setStep(idx)
+    setSugerenciasPanelOpen(false)
+    const el = document.getElementById('app-drawer') as HTMLInputElement | null
+    if (el) el.checked = false
   }
 
   const cargarEjemplo = async () => {
@@ -171,6 +217,20 @@ export default function App() {
     })
   }
 
+  const descargarPdfArc42 = useCallback(async () => {
+    setExportandoPdf(true)
+    try {
+      const titulo = doc.meta?.nombreProyecto?.trim() || 'arquitectura'
+      const { exportArc42Pdf } = await import('./arc42DocumentExport')
+      await exportArc42Pdf(titulo, preview)
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'No se pudo generar el PDF.'
+      window.alert(msg)
+    } finally {
+      setExportandoPdf(false)
+    }
+  }, [doc.meta?.nombreProyecto, preview])
+
   return (
     <div className="drawer lg:drawer-open min-h-screen">
       <input id="app-drawer" type="checkbox" className="drawer-toggle" />
@@ -178,11 +238,14 @@ export default function App() {
         <header className="navbar bg-base-100 border-b border-base-300 no-print px-4 gap-2">
           <div className="flex-none lg:hidden">
             <label htmlFor="app-drawer" className="btn btn-square btn-ghost drawer-button" aria-label="Menú">
-              ☰
+              <Icon icon={Menu} size="lg" />
             </label>
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-semibold truncate">{PASOS[step]}</h1>
+            <h1 className="text-lg font-semibold truncate flex items-center gap-2 min-w-0">
+              <Icon icon={STEP_ICONS[step]} size="lg" className="text-primary" />
+              <span className="truncate">{PASOS[step]}</span>
+            </h1>
             <p className="text-xs text-base-content/60 truncate">
               {doc.meta?.nombreProyecto?.trim() ? (
                 <span className="inline-flex items-center gap-2">
@@ -195,30 +258,47 @@ export default function App() {
             </p>
           </div>
           <div className="flex-none flex flex-wrap gap-2">
-            <button type="button" className="btn btn-sm btn-ghost" onClick={() => void cargarEjemplo()}>
+            <button type="button" className="btn btn-sm btn-ghost gap-1.5" onClick={() => void cargarEjemplo()}>
+              <Icon icon={FileText} />
               Ejemplo
             </button>
-            <label className="btn btn-sm btn-ghost cursor-pointer">
+            <label className="btn btn-sm btn-ghost cursor-pointer gap-1.5">
               <input
                 type="file"
                 accept="application/json"
                 className="hidden"
                 onChange={(e) => e.target.files?.[0] && cargarArchivo(e.target.files[0])}
               />
+              <Icon icon={FileUp} />
               Abrir JSON
             </label>
-            <button type="button" className="btn btn-sm btn-primary" onClick={aplicarSugerenciasClick}>
+            <button
+              type="button"
+              className="btn btn-sm btn-primary gap-1.5"
+              onClick={() => setSugerenciasPanelOpen((v) => !v)}
+            >
+              <Icon icon={Sparkles} />
               Sugerencias
+              {sugerenciasTotal > 0 ? (
+                <span className="badge badge-sm badge-neutral text-primary-content min-w-[1.25rem]">
+                  {sugerenciasTotal}
+                </span>
+              ) : null}
             </button>
           </div>
         </header>
 
-        <main className="flex-1 p-4 md:p-8 w-full max-w-4xl mx-auto min-w-0">
+        <main className="shrink-0 py-4 md:py-8 pb-6 w-full max-w-full px-4 sm:px-6 lg:px-10 xl:px-12 min-w-0">
           <div className="card bg-base-100 shadow-sm border border-base-300">
             <div className="card-body gap-0 p-6 md:p-8 flex flex-col min-w-0">
             {step === 0 && (
               <FormStack>
-                <StepHeader title="Proyecto y metas" desc="Define el alcance y el proveedor de nube principal del diseño." />
+                <PasoHeader
+                  stepIndex={0}
+                  icon={STEP_ICONS[0]}
+                  title="Proyecto y metas"
+                  desc="Define el alcance y el proveedor de nube principal del diseño."
+                />
                 <Field label="Nombre del proyecto" hint="Aparece en arc42 y exportaciones">
                   <TextInput
                     value={doc.meta.nombreProyecto}
@@ -280,7 +360,9 @@ export default function App() {
 
             {step === 1 && (
               <FormStack>
-                <StepHeader
+                <PasoHeader
+                  stepIndex={1}
+                  icon={STEP_ICONS[1]}
                   title="Restricciones y contexto"
                   desc="Límites del proyecto y perfil de negocio para sugerir patrones y servicios."
                 />
@@ -319,7 +401,9 @@ export default function App() {
 
             {step === 2 && (
               <FormStack>
-                <StepHeader
+                <PasoHeader
+                  stepIndex={2}
+                  icon={STEP_ICONS[2]}
                   title="Escenarios de calidad"
                   desc="Cada escenario debe tener estímulo, respuesta esperada y medida verificable."
                 />
@@ -357,9 +441,8 @@ export default function App() {
                     </Field>
                   </StackPanel>
                 ))}
-                <button
-                  type="button"
-                  className="btn btn-outline btn-sm mt-2"
+                <AddButton
+                  className="mt-2"
                   onClick={() =>
                     patch((d) => {
                       d.arc42.escenariosCalidad = [
@@ -370,13 +453,15 @@ export default function App() {
                   }
                 >
                   Añadir escenario
-                </button>
+                </AddButton>
               </FormStack>
             )}
 
             {step === 3 && (
               <FormStack>
-                <StepHeader
+                <PasoHeader
+                  stepIndex={3}
+                  icon={STEP_ICONS[3]}
                   title="Estrategia y bloques C4"
                   desc="Vista de contenedores: responsabilidad clara por bloque."
                 />
@@ -407,9 +492,7 @@ export default function App() {
                     </StackPanel>
                   )
                 )}
-                <button
-                  type="button"
-                  className="btn btn-outline btn-sm"
+                <AddButton
                   onClick={() =>
                     patch((d) => {
                       d.arc42.bloques = [...(d.arc42.bloques || []), { nombre: '', responsabilidad: '', tecnologia: '' }]
@@ -417,13 +500,39 @@ export default function App() {
                   }
                 >
                   Añadir bloque
-                </button>
+                </AddButton>
               </FormStack>
             )}
 
             {step === 4 && (
               <FormStack>
-                <StepHeader
+                <PasoHeader
+                  stepIndex={4}
+                  icon={STEP_ICONS[4]}
+                  title="Diagrama de arquitectura"
+                  desc="Vista interactiva C4: actores, contenedores, sistemas externos y servicios de nube del diseño actual."
+                />
+                <Suspense
+                  fallback={
+                    <div className="rounded-xl border border-base-300 bg-base-100 p-8 text-sm text-base-content/60 text-center">
+                      Cargando visor JointJS…
+                    </div>
+                  }
+                >
+                  <ArchitectureDiagram doc={doc} />
+                </Suspense>
+                <p className="text-xs text-base-content/55">
+                  El diagrama se alimenta de actores, contenedores C4 y servicios de nube. Arrastra el lienzo, usa Ctrl +
+                  rueda para zoom y el botón centrar para reencuadrar.
+                </p>
+              </FormStack>
+            )}
+
+            {step === 5 && (
+              <FormStack>
+                <PasoHeader
+                  stepIndex={5}
+                  icon={STEP_ICONS[5]}
                   title="Ejecución y despliegue"
                   desc="Describe entornos, redes y topología en el proveedor elegido."
                 />
@@ -442,9 +551,11 @@ export default function App() {
               </FormStack>
             )}
 
-            {step === 5 && (
+            {step === 6 && (
               <FormStack>
-                <StepHeader
+                <PasoHeader
+                  stepIndex={6}
+                  icon={STEP_ICONS[6]}
                   title="Servicios de nube"
                   desc={`Catálogo para ${proveedor.toUpperCase()}. Selecciona los servicios del diseño.`}
                 />
@@ -474,21 +585,26 @@ export default function App() {
                 ))}
                 {sugerencias?.servicios?.length ? (
                   <div className="alert alert-info text-sm mt-4">
-                    <strong>Sugeridos por reglas:</strong> {sugerencias.servicios.map((s) => s.nombre).join(' · ')}
+                    <Sparkles className="size-5 shrink-0" aria-hidden />
+                    <span>
+                      <strong>Sugeridos por reglas:</strong> {sugerencias.servicios.map((s) => s.nombre).join(' · ')}
+                    </span>
                   </div>
                 ) : null}
               </FormStack>
             )}
 
-            {step === 6 && (
+            {step === 7 && (
               <FormStack>
-                <StepHeader
+                <PasoHeader
+                  stepIndex={7}
+                  icon={STEP_ICONS[7]}
                   title="Patrones y antipatrones"
                   desc="Marca qué recomendaciones adoptas o qué riesgos arquitectónicos mitigas."
                 />
                 {(doc.patrones || []).length === 0 ? (
                   <div className="text-center py-10 text-sm text-base-content/55 border border-dashed border-base-300 rounded-xl">
-                    Sin patrones aún. Pulsa <strong>Sugerencias</strong> en la barra superior.
+                    Sin patrones aún. Abre <strong>Sugerencias</strong> en la barra superior y aplica el catálogo.
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2 w-full min-w-0">
@@ -532,9 +648,11 @@ export default function App() {
               </FormStack>
             )}
 
-            {step === 7 && (
+            {step === 8 && (
               <FormStack>
-                <StepHeader
+                <PasoHeader
+                  stepIndex={8}
+                  icon={STEP_ICONS[8]}
                   title="Well-Architected"
                   desc="Línea base de controles por pilar (referencia, no el cuestionario oficial completo)."
                 />
@@ -594,9 +712,11 @@ export default function App() {
               </FormStack>
             )}
 
-            {step === 8 && (
+            {step === 9 && (
               <FormStack>
-                <StepHeader
+                <PasoHeader
+                  stepIndex={9}
+                  icon={STEP_ICONS[9]}
                   title="ADRs y riesgos"
                   desc="Documenta decisiones y riesgos ligados a brechas de controles."
                 />
@@ -609,9 +729,7 @@ export default function App() {
                     </StackPanel>
                   )
                 )}
-                <button
-                  type="button"
-                  className="btn btn-outline btn-sm"
+                <AddButton
                   onClick={() =>
                     patch((d) => {
                       d.arc42.decisiones = [
@@ -629,7 +747,7 @@ export default function App() {
                   }
                 >
                   Añadir ADR
-                </button>
+                </AddButton>
                 <SectionTitle compact>Riesgos</SectionTitle>
                 <div className="flex flex-col gap-4 w-full min-w-0">
                 {(doc.arc42.riesgos || []).map((r: { titulo: string; relacionControl: string }, idx: number) => (
@@ -649,9 +767,7 @@ export default function App() {
                   </FormRow>
                 ))}
                 </div>
-                <button
-                  type="button"
-                  className="btn btn-outline btn-sm"
+                <AddButton
                   onClick={() =>
                     patch((d) => {
                       d.arc42.riesgos = [
@@ -662,71 +778,118 @@ export default function App() {
                   }
                 >
                   Añadir riesgo
-                </button>
+                </AddButton>
               </FormStack>
             )}
 
-            {step === 9 && (
+            {step === 10 && (
               <FormStack>
-                <StepHeader title="Validación y exportación" desc="Revisa el resultado del validador y exporta el entregable." />
+                <PasoHeader
+                  stepIndex={10}
+                  icon={STEP_ICONS[10]}
+                  title="Validación y exportación"
+                  desc="Revisa el resultado del validador y exporta el entregable."
+                />
                 <CardValidation validation={validation} />
-                <div className="toolbar" style={{ marginBottom: '1.25rem' }}>
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    onClick={() => download('arquitectura.json', JSON.stringify(doc, null, 2), 'application/json')}
-                  >
-                    Descargar JSON
-                  </button>
-                  <button type="button" className="btn btn-primary" onClick={() => download('arc42.md', preview, 'text/markdown')}>
-                    Descargar Markdown
-                  </button>
-                  <button type="button" className="btn" onClick={() => window.print()}>
-                    Imprimir / PDF
-                  </button>
+                <div className="w-full min-w-0">
+                  <SectionTitle compact>
+                    <span className="inline-flex items-center gap-2 normal-case tracking-normal">
+                      <Download className="size-4" aria-hidden />
+                      Exportar
+                    </span>
+                  </SectionTitle>
+                  <Box className="join join-vertical w-full sm:join-horizontal sm:w-auto max-w-full">
+                    <button
+                      type="button"
+                      className="btn btn-primary join-item w-full sm:w-auto gap-2"
+                      onClick={() => download('arquitectura.json', JSON.stringify(doc, null, 2), 'application/json')}
+                    >
+                      <Braces className="size-4 shrink-0" aria-hidden />
+                      Descargar JSON
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary join-item w-full sm:w-auto gap-2"
+                      onClick={() => download('arc42.md', preview, 'text/markdown')}
+                    >
+                      <FileText className="size-4 shrink-0" aria-hidden />
+                      Descargar Markdown
+                    </button>
+                    <button
+                      type="button"
+                      className="btn join-item w-full sm:w-auto gap-2"
+                      disabled={exportandoPdf}
+                      onClick={() => void descargarPdfArc42()}
+                    >
+                      {exportandoPdf ? (
+                        <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
+                      ) : (
+                        <FileDown className="size-4 shrink-0" aria-hidden />
+                      )}
+                      {exportandoPdf ? 'Generando PDF…' : 'Descargar PDF'}
+                    </button>
+                  </Box>
                 </div>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  onClick={() => setStep(0)}
-                  style={{ marginBottom: '0.75rem' }}
-                >
+                <button type="button" className="btn btn-ghost btn-sm self-start gap-2" onClick={() => setStep(0)}>
+                  <RotateCcw className="size-4 shrink-0" aria-hidden />
                   Volver al inicio para ajustes
                 </button>
-                <Field label="Vista previa arc42" hint="Markdown renderizado con diagramas Mermaid (contexto, C4 y despliegue)">
-                  <Arc42Preview markdown={preview} />
+                <Field
+                  label="Vista previa arc42"
+                  hint="El PDF usa PT Sans / PT Sans Narrow (títulos en rojo), Fira Code en código y diagramas en página horizontal."
+                >
+                  <Suspense
+                    fallback={
+                      <div className="rounded-xl border border-base-300 bg-base-100 p-6 text-sm text-base-content/60">
+                        Cargando vista previa…
+                      </div>
+                    }
+                  >
+                    <Arc42Preview markdown={preview} />
+                  </Suspense>
                 </Field>
               </FormStack>
             )}
             </div>
           </div>
 
-          <Box className="flex flex-wrap justify-between items-center gap-3 mt-6 no-print">
-            <span className="text-sm text-base-content/60">
+        </main>
+
+        <footer className="shrink-0 mt-auto border-t border-base-300 bg-base-100 no-print">
+          <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-12 py-3 flex flex-wrap justify-between items-center gap-3">
+            <span className="text-sm text-base-content/60 inline-flex items-center gap-2">
+              <Icon icon={STEP_ICONS[step]} size="sm" className="opacity-70" />
               Paso {step + 1} de {PASOS.length}
             </span>
             <Box className="join">
               {step > 0 && (
-                <button type="button" className="btn join-item" onClick={() => setStep((s) => s - 1)}>
+                <button type="button" className="btn join-item gap-1.5" onClick={() => setStep((s) => s - 1)}>
+                  <ChevronLeft className="size-4" aria-hidden />
                   Anterior
                 </button>
               )}
               {step < PASOS.length - 1 && (
-                <button type="button" className="btn btn-primary join-item" onClick={() => setStep((s) => s + 1)}>
+                <button type="button" className="btn btn-primary join-item gap-1.5" onClick={() => setStep((s) => s + 1)}>
                   Siguiente
+                  <ChevronRight className="size-4" aria-hidden />
                 </button>
               )}
             </Box>
-          </Box>
-        </main>
+          </div>
+        </footer>
       </div>
 
       <div className="drawer-side z-30">
         <label htmlFor="app-drawer" className="drawer-overlay" aria-label="Cerrar menú" />
-        <aside className="bg-neutral text-neutral-content min-h-full w-72 p-4 flex flex-col gap-5">
-          <div>
-            <p className="font-semibold text-lg leading-tight">Arquitectura cloud</p>
-            <p className="text-sm opacity-70 mt-1">arc42 · C4 · Well-Architected</p>
+        <aside className="bg-neutral text-neutral-content min-h-full lg:min-h-screen w-72 p-4 flex flex-col gap-5">
+          <div className="flex gap-3 items-start">
+            <div className="rounded-lg bg-primary/20 p-2 shrink-0">
+              <Layers className="size-6 text-primary-content" aria-hidden />
+            </div>
+            <div>
+              <p className="font-semibold text-lg leading-tight">Arquitectura cloud</p>
+              <p className="text-sm opacity-70 mt-1">arc42 · C4 · Well-Architected</p>
+            </div>
           </div>
           <div>
             <div className="flex justify-between text-xs opacity-80 mb-1">
@@ -742,20 +905,26 @@ export default function App() {
               <li key={t}>
                 <button
                   type="button"
-                  className={i === step ? 'active' : ''}
+                  className={`flex items-center gap-2 ${i === step ? 'active' : ''}`}
                   onClick={() => {
                     setStep(i)
                     const el = document.getElementById('app-drawer') as HTMLInputElement | null
                     if (el) el.checked = false
                   }}
                 >
+                  <Icon icon={STEP_ICONS[i]} size="sm" className="opacity-80" />
+                  <span className="flex-1 text-left">{t}</span>
                   <span className="badge badge-sm badge-neutral">{i + 1}</span>
-                  {t}
                 </button>
               </li>
             ))}
           </ul>
           <div className={`alert text-sm py-3 ${validation.valido ? 'alert-success' : 'alert-warning'}`}>
+            {validation.valido ? (
+              <CircleCheck className="size-6 shrink-0" aria-hidden />
+            ) : (
+              <CircleAlert className="size-6 shrink-0" aria-hidden />
+            )}
             <div>
               <p className="font-medium">{validation.valido ? 'Especificación válida' : 'Pendientes'}</p>
               <p className="text-xs opacity-90">
@@ -767,6 +936,15 @@ export default function App() {
           </div>
         </aside>
       </div>
+      <SuggestionsPanel
+        open={sugerenciasPanelOpen}
+        onClose={() => setSugerenciasPanelOpen(false)}
+        sugerencias={sugerencias as SugerenciasPreview}
+        proveedor={proveedor}
+        perfilActivo={perfilActivo}
+        onApply={aplicarSugerenciasClick}
+        onGoStep={irAPaso}
+      />
     </div>
   )
 }
@@ -782,6 +960,11 @@ function CardValidation({
 }) {
   return (
     <div role="alert" className={`alert ${validation.valido ? 'alert-success' : 'alert-error'} mb-4`}>
+      {validation.valido ? (
+        <CircleCheck className="size-6 shrink-0" aria-hidden />
+      ) : (
+        <CircleAlert className="size-6 shrink-0" aria-hidden />
+      )}
       <Box>
         {validation.valido ? (
           <p>El documento cumple la línea base y puede exportarse.</p>

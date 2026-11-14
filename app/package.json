@@ -13,11 +13,13 @@
     "@joint/core": "^4.3.4",
     "@tailwindcss/vite": "^4.3.5",
     "daisyui": "^5.8.0",
+    "lucide-react": "^1.73.0",
+    "marked": "^18.2.0",
+    "mermaid": "^11.12.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
-    "mermaid": "^11.12.0",
     "tailwindcss": "^4.3.5"
   },
   "devDependencies": {

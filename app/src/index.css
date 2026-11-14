@@ -1,5 +1,12 @@
 @import 'tailwindcss';
 
+html,
+body,
+#root {
+  min-height: 100%;
+  background-color: var(--color-base-200);
+}
+
 @plugin 'daisyui' {
   themes: archis --default;
 }
@@ -58,8 +65,18 @@
   min-width: 0;
 }
 
+.joint-host svg {
+  display: block;
+  max-width: none;
+}
+
 @media print {
   .no-print {
+    display: none !important;
+  }
+
+  /* Solo exportar arc42 desde la ventana dedicada, no el asistente */
+  body:has(#root) {
     display: none !important;
   }
 }

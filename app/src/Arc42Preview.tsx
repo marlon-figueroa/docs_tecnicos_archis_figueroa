@@ -1,27 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import mermaid from 'mermaid'
-
-let mermaidReady = false
-
-function ensureMermaid() {
-  if (mermaidReady) return
-  mermaid.initialize({
-    startOnLoad: false,
-    securityLevel: 'strict',
-    theme: 'base',
-    themeVariables: {
-      primaryColor: '#5f27cd',
-      primaryTextColor: '#ffffff',
-      primaryBorderColor: '#4a1fa8',
-      lineColor: '#5f27cd',
-      secondaryColor: '#f4f0ff',
-      tertiaryColor: '#fafafa',
-    },
-  })
-  mermaidReady = true
-}
+import { loadMermaidForPreview } from './mermaidLoader'
 
 function MermaidBlock({ chart }: { chart: string }) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -33,11 +13,10 @@ function MermaidBlock({ chart }: { chart: string }) {
     if (!el) return
     let cancelled = false
 
-    ensureMermaid()
     const renderId = `arc42-mmd-${reactId.replace(/:/g, '')}-${Math.random().toString(36).slice(2, 9)}`
 
-    void mermaid
-      .render(renderId, chart.trim())
+    void loadMermaidForPreview()
+      .then((mermaid) => mermaid.render(renderId, chart.trim()))
       .then(({ svg, bindFunctions }) => {
         if (cancelled) return
         el.innerHTML = svg

@@ -15,4 +15,33 @@ export default defineConfig({
       '@nucleo': path.resolve(rootDir, '../nucleo'),
     },
   },
+  build: {
+    // Mermaid se carga bajo demanda; el chunk puede superar 500 kB sin afectar la carga inicial.
+    chunkSizeWarningLimit: 4000,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined
+          if (
+            id.includes('react-markdown') ||
+            id.includes('remark') ||
+            id.includes('micromark') ||
+            id.includes('mdast') ||
+            id.includes('marked')
+          ) {
+            return 'vendor-markdown'
+          }
+          if (id.includes('react-dom') || id.includes('/react/')) {
+            return 'vendor-react'
+          }
+          if (id.includes('mermaid') || id.includes('cytoscape') || id.includes('dagre')) {
+            return 'vendor-diagrams'
+          }
+          if (id.includes('@joint')) {
+            return 'vendor-joint'
+          }
+        },
+      },
+    },
+  },
 })

@@ -1,4 +1,6 @@
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react'
+import type { LucideIcon } from 'lucide-react'
+import { Cloud } from 'lucide-react'
 
 const inputCls = 'input input-bordered w-full min-w-0 focus:input-primary text-base'
 const textareaCls =
@@ -45,11 +47,58 @@ export function Field({
   )
 }
 
-export function StepHeader({ title, desc }: { title: string; desc: string }) {
+export function StepHeader({
+  title,
+  desc,
+  icon: StepIcon,
+  stepIndex,
+  stepTotal,
+}: {
+  title: string
+  desc: string
+  icon?: LucideIcon
+  stepIndex?: number
+  stepTotal?: number
+}) {
+  const stepBadge =
+    stepIndex !== undefined && stepTotal !== undefined ? (
+      <span className="badge badge-sm badge-primary badge-outline font-mono tabular-nums">
+        {String(stepIndex + 1).padStart(2, '0')}/{String(stepTotal).padStart(2, '0')}
+      </span>
+    ) : null
+
   return (
-    <header className="mb-1 pb-4 border-b border-base-200 shrink-0">
-      <h2 className="text-xl font-semibold text-base-content">{title}</h2>
-      <p className="text-sm text-base-content/65 mt-1.5 leading-relaxed">{desc}</p>
+    <header className="relative mb-1 shrink-0 overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/[0.09] via-base-100 to-base-200/30 shadow-sm">
+      <div className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-primary via-primary/80 to-primary/40" aria-hidden />
+      <div className="absolute -right-8 -top-10 size-40 rounded-full bg-primary/[0.06] blur-2xl pointer-events-none" aria-hidden />
+
+      <div className="relative flex flex-col gap-4 p-5 md:p-6 pl-6 md:pl-7">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {stepIndex !== undefined && stepTotal !== undefined ? (
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-primary/90">
+              Paso {stepIndex + 1} de {stepTotal}
+            </p>
+          ) : (
+            <span />
+          )}
+          {stepBadge}
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-start gap-4 min-w-0">
+          {StepIcon ? (
+            <div
+              className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-content shadow-lg shadow-primary/25 ring-4 ring-primary/10"
+              aria-hidden
+            >
+              <StepIcon className="size-7" strokeWidth={1.75} />
+            </div>
+          ) : null}
+          <div className="min-w-0 flex-1 pt-0.5">
+            <h2 className="text-xl md:text-2xl font-semibold text-base-content tracking-tight leading-tight">{title}</h2>
+            <p className="text-sm md:text-[0.9375rem] text-base-content/70 mt-2.5 leading-relaxed max-w-4xl">{desc}</p>
+          </div>
+        </div>
+      </div>
     </header>
   )
 }
@@ -66,9 +115,12 @@ export function StackPanel({
   return (
     <div className="card card-border bg-base-200/30 shadow-sm w-full min-w-0">
       <div className="card-body gap-0 p-4 sm:p-5">
-        <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-base-300/60">
-          <h3 className="font-semibold text-base">{title}</h3>
-          {badge ? <span className="badge badge-ghost badge-sm font-mono shrink-0">{badge}</span> : null}
+        <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-primary/15">
+          <h3 className="font-semibold text-base text-base-content flex items-center gap-2">
+            <span className="size-1.5 rounded-full bg-primary shrink-0" aria-hidden />
+            {title}
+          </h3>
+          {badge ? <span className="badge badge-primary badge-outline badge-sm font-mono shrink-0">{badge}</span> : null}
         </div>
         <FormStack>{children}</FormStack>
       </div>
@@ -155,7 +207,12 @@ export function ServiceTile({
 export function ProviderBadge({ proveedor }: { proveedor: string }) {
   const cls =
     proveedor === 'aws' ? 'badge-warning' : proveedor === 'azure' ? 'badge-info' : 'badge-secondary'
-  return <span className={`badge badge-sm ${cls} uppercase font-semibold`}>{proveedor}</span>
+  return (
+    <span className={`badge badge-sm gap-1 ${cls} uppercase font-semibold`}>
+      <Cloud className="size-3" aria-hidden />
+      {proveedor}
+    </span>
+  )
 }
 
 export function SectionTitle({ children, compact }: { children: ReactNode; compact?: boolean }) {
