@@ -1,0 +1,65 @@
+@import 'tailwindcss';
+
+@plugin 'daisyui' {
+  themes: archis --default;
+}
+
+@plugin 'daisyui/theme' {
+  name: archis;
+  default: true;
+  color-scheme: light;
+
+  --color-base-100: oklch(100% 0 0);
+  --color-base-200: oklch(96% 0.012 300);
+  --color-base-300: oklch(91% 0.02 300);
+  --color-base-content: oklch(22% 0.03 285);
+
+  --color-primary: #5f27cd;
+  --color-primary-content: #ffffff;
+
+  --color-secondary: #000000;
+  --color-secondary-content: #ffffff;
+
+  --color-accent: oklch(58% 0.18 300);
+  --color-accent-content: #ffffff;
+
+  --color-neutral: #000000;
+  --color-neutral-content: #ffffff;
+
+  --color-info: oklch(60% 0.126 221.723);
+  --color-info-content: #ffffff;
+  --color-success: oklch(62% 0.194 149.214);
+  --color-success-content: #ffffff;
+  --color-warning: oklch(85% 0.199 91.936);
+  --color-warning-content: #000000;
+  --color-error: oklch(70% 0.191 22.216);
+  --color-error-content: #ffffff;
+
+  --radius-selector: 0.5rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/* Evita desbordes en grillas con inputs daisyUI */
+.card-body .form-control,
+.card-body .input,
+.card-body .select,
+.card-body .textarea {
+  max-width: 100%;
+}
+
+.collapse,
+.collapse-content {
+  min-width: 0;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

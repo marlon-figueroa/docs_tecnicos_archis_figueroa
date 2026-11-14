@@ -1,0 +1,13 @@
+{
+  "name": "docs-tecnicos-archis-figueroa",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Línea base de requerimientos de arquitectura AWS/Azure (arc42, C4, Well-Architected)",
+  "scripts": {
+    "validar": "node scripts/validar.mjs",
+    "sugerir": "node scripts/sugerir.mjs",
+    "render": "node scripts/render-arc42.mjs",
+    "dev": "npm run dev --prefix app"
+  }
+}

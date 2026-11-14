@@ -1,0 +1,14 @@
+[
+  {"id": "distributed-monolith", "nombre": "Monolito distribuido", "senal": "Microservicios desplegados por separado pero acoplados por BD compartida o llamadas síncronas en cadena", "remediacion": "Definir límites de contexto, database-per-service y APIs asíncronas donde aplique"},
+  {"id": "premature-microservices", "nombre": "Microservicios prematuros", "senal": "Muchos servicios sin dominio claro ni necesidad de escala independiente", "remediacion": "Modular monolith o servicios por contexto acotado"},
+  {"id": "sync-chain", "nombre": "Cadena síncrona larga", "senal": "Más de tres saltos HTTP síncronos en el camino crítico", "remediacion": "Eventos, colas o agregación en BFF"},
+  {"id": "secrets-in-code", "nombre": "Secretos en código o repos", "senal": "Credenciales en variables planas en Git", "remediacion": "Secrets Manager / Key Vault e inyección en runtime"},
+  {"id": "single-az", "nombre": "Una sola zona de disponibilidad", "senal": "RTO bajo pero todo en una AZ/región sin HA", "remediacion": "Multi-AZ, réplicas y pruebas de conmutación"},
+  {"id": "always-on-oversize", "nombre": "Sobredimensionar siempre encendido", "senal": "EC2/VM grandes 24/7 para picos breves", "remediacion": "Serverless, autoescalado o colas"},
+  {"id": "shared-database", "nombre": "Base de datos compartida entre servicios", "senal": "Varios servicios escriben las mismas tablas", "remediacion": "Dueño de datos por servicio y APIs o eventos"},
+  {"id": "stateful-serverless", "nombre": "Serverless con estado local", "senal": "Lambda/Functions que guardan sesión en disco local", "remediacion": "Estado en DynamoDB/Redis o sesiones externas"},
+  {"id": "god-service", "nombre": "Servicio dios", "senal": "Un componente concentra reglas de negocio, integración y presentación", "remediacion": "Separar por capacidad y contexto"},
+  {"id": "no-observability", "nombre": "Caja negra operativa", "senal": "Sin métricas, logs estructurados ni trazas en producción", "remediacion": "Pilares de observabilidad desde el diseño"},
+  {"id": "perimeter-only-security", "nombre": "Seguridad solo en perímetro", "senal": "Todo confía en la red interna sin mTLS ni autorización fina", "remediacion": "Zero trust, IAM/RBAC por recurso"},
+  {"id": "manual-dr", "nombre": "DR solo documentado", "senal": "RPO/RTO en papel sin backups probados ni runbooks", "remediacion": "Backups automatizados, pruebas de restauración y ADR de DR"}
+]

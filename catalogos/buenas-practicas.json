@@ -1,0 +1,64 @@
+{
+  "aws": {
+    "excelencia-operacional": [
+      "Infraestructura como código (CloudFormation/CDK/Terraform) con revisiones",
+      "Runbooks y alarmas accionables en CloudWatch",
+      "Despliegues automatizados con rollback"
+    ],
+    "seguridad": [
+      "Principio de mínimo privilegio en IAM",
+      "Cifrado en tránsito y reposo por defecto",
+      "Gestión centralizada de secretos"
+    ],
+    "fiabilidad": [
+      "Multi-AZ para componentes stateful críticos",
+      "Cuotas y límites de servicio revisados antes de producción",
+      "Pruebas de conmutación y chaos controlado"
+    ],
+    "eficiencia-rendimiento": [
+      "Selección de instancia/compute según perfil de carga",
+      "Caché en el borde (CloudFront) y cerca de datos",
+      "Revisión periódica de latencia y throughput"
+    ],
+    "optimizacion-costos": [
+      "Etiquetado de costos y budgets",
+      "Rightsizing y planes de ahorro cuando la carga es estable",
+      "Serverless o escalado para cargas intermitentes"
+    ],
+    "sostenibilidad": [
+      "Regiones y tamaños de recurso alineados a la demanda real",
+      "Arquitecturas sin sobreaprovisionamiento permanente"
+    ]
+  },
+  "azure": {
+    "excelencia-operacional": [
+      "Bicep/Terraform/ARM con pipelines de revisión",
+      "Azure Monitor y alertas con acciones definidas",
+      "Slots y despliegues blue-green donde aplique"
+    ],
+    "seguridad": [
+      "Microsoft Entra ID y RBAC por recurso",
+      "Defender for Cloud y políticas de cumplimiento",
+      "Key Vault para secretos y claves"
+    ],
+    "fiabilidad": [
+      "Zonas de disponibilidad y pares de regiones",
+      "SLA de servicios PaaS considerados en RTO",
+      "Azure Site Recovery o backup administrado probado"
+    ],
+    "eficiencia-rendimiento": [
+      "SKU y tier según carga (App Service, SQL, etc.)",
+      "CDN Front Door para contenido estático",
+      "Application Insights para cuellos de botella"
+    ],
+    "optimizacion-costos": [
+      "Cost Management + tags",
+      "Reservas para cargas predecibles",
+      "Consumption para picos"
+    ],
+    "sostenibilidad": [
+      "Escala automática en lugar de capacidad fija",
+      "Consolidación de cargas en PaaS administrado"
+    ]
+  }
+}

@@ -1,0 +1,114 @@
+{
+  "aws": [
+    {
+      "pilar": "excelencia-operacional",
+      "controles": [
+        {"id": "OPS-01", "texto": "¿Los cambios de infraestructura están versionados y automatizados?"},
+        {"id": "OPS-02", "texto": "¿Existen alarmas y runbooks para incidentes frecuentes?"},
+        {"id": "OPS-03", "texto": "¿Hay estrategia de despliegue con reversión?"},
+        {"id": "OPS-04", "texto": "¿La observabilidad cubre métricas, logs y trazas del camino crítico?"}
+      ]
+    },
+    {
+      "pilar": "seguridad",
+      "controles": [
+        {"id": "SEC-01", "texto": "¿Identidad y acceso siguen mínimo privilegio?"},
+        {"id": "SEC-02", "texto": "¿Datos sensibles cifrados en tránsito y reposo?"},
+        {"id": "SEC-03", "texto": "¿Secretos fuera del código y con rotación?"},
+        {"id": "SEC-04", "texto": "¿Hay protección en perímetro (WAF) y segmentación de red?"}
+      ]
+    },
+    {
+      "pilar": "fiabilidad",
+      "controles": [
+        {"id": "REL-01", "texto": "¿La arquitectura tolera falla de una AZ?"},
+        {"id": "REL-02", "texto": "¿Backups y RPO están definidos y probados?"},
+        {"id": "REL-03", "texto": "¿Cuotas y límites de servicio revisados?"},
+        {"id": "REL-04", "texto": "¿Dependencias críticas tienen timeout, reintento e idempotencia?"}
+      ]
+    },
+    {
+      "pilar": "eficiencia-rendimiento",
+      "controles": [
+        {"id": "PERF-01", "texto": "¿El cómputo y almacenamiento coinciden con el perfil de carga?"},
+        {"id": "PERF-02", "texto": "¿Hay caché o CDN donde reduzca latencia?"},
+        {"id": "PERF-03", "texto": "¿Procesos pesados están desacoplados asíncronamente?"},
+        {"id": "PERF-04", "texto": "¿Existen pruebas de carga sobre escenarios de calidad?"}
+      ]
+    },
+    {
+      "pilar": "optimizacion-costos",
+      "controles": [
+        {"id": "COST-01", "texto": "¿Recursos etiquetados para asignación de costos?"},
+        {"id": "COST-02", "texto": "¿Se evita capacidad fija para cargas intermitentes?"},
+        {"id": "COST-03", "texto": "¿Hay revisión periódica de recursos ociosos?"},
+        {"id": "COST-04", "texto": "¿Entornos no productivos se apagan o reducen fuera de horario?"}
+      ]
+    },
+    {
+      "pilar": "sostenibilidad",
+      "controles": [
+        {"id": "SUS-01", "texto": "¿La arquitectura evita sobreaprovisionamiento continuo?"},
+        {"id": "SUS-02", "texto": "¿El escalado sigue la demanda real?"},
+        {"id": "SUS-03", "texto": "¿Se priorizan servicios administrados sobre VMs siempre encendidas?"},
+        {"id": "SUS-04", "texto": "¿Datos y retención alineados a necesidad (menos almacenamiento innecesario)?"}
+      ]
+    }
+  ],
+  "azure": [
+    {
+      "pilar": "excelencia-operacional",
+      "controles": [
+        {"id": "OPS-01", "texto": "¿La infraestructura está en IaC con revisiones?"},
+        {"id": "OPS-02", "texto": "¿Azure Monitor alerta con respuesta definida?"},
+        {"id": "OPS-03", "texto": "¿Despliegues con slots o canary cuando aplique?"},
+        {"id": "OPS-04", "texto": "¿Application Insights en servicios críticos?"}
+      ]
+    },
+    {
+      "pilar": "seguridad",
+      "controles": [
+        {"id": "SEC-01", "texto": "¿Entra ID y RBAC por recurso?"},
+        {"id": "SEC-02", "texto": "¿Cifrado y TLS en puntos de exposición?"},
+        {"id": "SEC-03", "texto": "¿Secretos en Key Vault?"},
+        {"id": "SEC-04", "texto": "¿WAF en Application Gateway o Front Door?"}
+      ]
+    },
+    {
+      "pilar": "fiabilidad",
+      "controles": [
+        {"id": "REL-01", "texto": "¿Zonas de disponibilidad para datos críticos?"},
+        {"id": "REL-02", "texto": "¿Backup de Azure SQL / Storage con RPO probado?"},
+        {"id": "REL-03", "texto": "¿Límites de suscripción y SKU revisados?"},
+        {"id": "REL-04", "texto": "¿Resiliencia en Service Bus y llamadas HTTP?"}
+      ]
+    },
+    {
+      "pilar": "eficiencia-rendimiento",
+      "controles": [
+        {"id": "PERF-01", "texto": "¿SKU/tier adecuados (Functions, SQL, App Service)?"},
+        {"id": "PERF-02", "texto": "¿Front Door/CDN para estáticos?"},
+        {"id": "PERF-03", "texto": "¿Procesamiento asíncrono con colas o Event Grid?"},
+        {"id": "PERF-04", "texto": "¿Pruebas de rendimiento documentadas?"}
+      ]
+    },
+    {
+      "pilar": "optimizacion-costos",
+      "controles": [
+        {"id": "COST-01", "texto": "¿Tags de cost management?"},
+        {"id": "COST-02", "texto": "¿Consumption vs plan dedicado justificado?"},
+        {"id": "COST-03", "texto": "¿Advisor o revisión de recursos ociosos?"},
+        {"id": "COST-04", "texto": "¿Dev/test con auto-shutdown?"}
+      ]
+    },
+    {
+      "pilar": "sostenibilidad",
+      "controles": [
+        {"id": "SUS-01", "texto": "¿Escalado automático en lugar de VMs fijas?"},
+        {"id": "SUS-02", "texto": "¿PaaS preferido para reducir superficie ociosa?"},
+        {"id": "SUS-03", "texto": "¿Retención de logs y datos acotada?"},
+        {"id": "SUS-04", "texto": "¿Arquitectura alineada a demanda estacional?"}
+      ]
+    }
+  ]
+}

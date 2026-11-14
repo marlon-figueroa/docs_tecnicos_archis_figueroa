@@ -1,0 +1,17 @@
+[
+  {"id": "strangler-fig", "nombre": "Strangler Fig", "cuando": "Migración gradual de un sistema legado sin big-bang", "beneficio": "Reduce riesgo y permite entrega incremental"},
+  {"id": "bff", "nombre": "Backend for Frontend (BFF)", "cuando": "Varios clientes con necesidades de API distintas", "beneficio": "Evita APIs genéricas sobrecargadas"},
+  {"id": "api-gateway", "nombre": "API Gateway", "cuando": "Múltiples servicios expuestos a clientes externos", "beneficio": "Punto único de autenticación, limitación y enrutamiento"},
+  {"id": "queue-leveling", "nombre": "Cola para nivelar carga", "cuando": "Picos de tráfico impredecibles o procesamiento asíncrono", "beneficio": "Absorbe picos y desacopla productores de consumidores"},
+  {"id": "outbox", "nombre": "Transactional Outbox", "cuando": "Publicar eventos sin perder consistencia con la BD", "beneficio": "Evita doble escritura inconsistente"},
+  {"id": "saga", "nombre": "Saga", "cuando": "Transacciones distribuidas sin 2PC", "beneficio": "Coordinación de pasos con compensación"},
+  {"id": "cqrs", "nombre": "CQRS", "cuando": "Lecturas y escrituras con perfiles de carga muy distintos", "beneficio": "Escala lectura e escritura de forma independiente"},
+  {"id": "cache-aside", "nombre": "Cache-aside", "cuando": "Lecturas repetitivas de datos relativamente estables", "beneficio": "Reduce latencia y carga en el origen de datos"},
+  {"id": "circuit-breaker", "nombre": "Circuit Breaker", "cuando": "Dependencias remotas con fallos intermitentes", "beneficio": "Evita cascadas de fallo y permite recuperación"},
+  {"id": "database-per-service", "nombre": "Database per Service", "cuando": "Microservicios con límites de contexto claros", "beneficio": "Autonomía de datos por servicio"},
+  {"id": "hub-and-spoke", "nombre": "Hub-and-Spoke (red)", "cuando": "Varias VPC/VNet con conectividad centralizada", "beneficio": "Segmentación y gobernanza de red"},
+  {"id": "retry-idempotency", "nombre": "Reintento con idempotencia", "cuando": "Llamadas que pueden reintentarse de forma segura", "beneficio": "Resiliencia sin duplicar efectos"},
+  {"id": "sidecar", "nombre": "Sidecar", "cuando": "Cross-cutting en contenedores (mTLS, observabilidad)", "beneficio": "Separa concerns de infra del código de negocio"},
+  {"id": "event-sourcing", "nombre": "Event Sourcing", "cuando": "Auditoría completa y reconstrucción de estado", "beneficio": "Trazabilidad y modelo temporal explícito"},
+  {"id": "bulkhead", "nombre": "Bulkhead", "cuando": "Aislar recursos críticos de cargas ruidosas", "beneficio": "Contención de fallos por partición de recursos"}
+]

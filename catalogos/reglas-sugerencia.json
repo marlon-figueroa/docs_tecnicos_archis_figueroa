@@ -1,0 +1,137 @@
+[
+  {
+    "id": "carga-variable-serverless",
+    "condicion": { "cargaVariable": true, "tareasCortas": true },
+    "patrones": ["queue-leveling"],
+    "serviciosAws": ["aws-lambda", "aws-sqs"],
+    "serviciosAzure": ["azure-functions", "azure-servicebus-queue"],
+    "antipatrones": ["always-on-oversize", "stateful-serverless"],
+    "motivo": "Carga intermitente y trabajos breves encajan mejor en modelo evento/cola que en capacidad fija."
+  },
+  {
+    "id": "transaccional-relacional",
+    "condicion": { "datosTransaccionales": true, "modeloRelacional": true },
+    "patrones": ["database-per-service"],
+    "serviciosAws": ["aws-aurora"],
+    "serviciosAzure": ["azure-sql"],
+    "antipatrones": ["shared-database"],
+    "motivo": "Consistencia transaccional fuerte sugiere motor relacional administrado con dueño de datos por servicio."
+  },
+  {
+    "id": "api-multiples-clientes",
+    "condicion": { "multiplesClientes": true },
+    "patrones": ["bff", "api-gateway"],
+    "serviciosAws": ["aws-apigateway", "aws-alb"],
+    "serviciosAzure": ["azure-apim", "azure-app-gateway"],
+    "antipatrones": ["god-service"],
+    "motivo": "Varios tipos de cliente requieren agregación y políticas en el borde."
+  },
+  {
+    "id": "picos-trafico",
+    "condicion": { "picosCarga": true },
+    "patrones": ["queue-leveling", "cache-aside"],
+    "serviciosAws": ["aws-sqs", "aws-cloudfront"],
+    "serviciosAzure": ["azure-servicebus-queue", "azure-front-door"],
+    "antipatrones": ["always-on-oversize"],
+    "motivo": "Picos se absorben con colas, caché y CDN en lugar de dimensionar al pico permanente."
+  },
+  {
+    "id": "eventos-dominio",
+    "condicion": { "integracionEventos": true },
+    "patrones": ["outbox", "saga"],
+    "serviciosAws": ["aws-eventbridge", "aws-sns", "aws-sqs"],
+    "serviciosAzure": ["azure-eventgrid", "azure-servicebus-queue"],
+    "antipatrones": ["sync-chain"],
+    "motivo": "Integración orientada a eventos reduce acoplamiento síncrono."
+  },
+  {
+    "id": "lecturas-intensivas",
+    "condicion": { "lecturasIntensivas": true },
+    "patrones": ["cqrs", "cache-aside"],
+    "serviciosAws": ["aws-dynamodb", "aws-opensearch"],
+    "serviciosAzure": ["azure-cosmosdb", "azure-cognitive-search"],
+    "antipatrones": ["god-service"],
+    "motivo": "Separar lecturas permite escalar consultas y búsqueda sin cargar el write model."
+  },
+  {
+    "id": "identidad-externa",
+    "condicion": { "usuariosExternos": true },
+    "patrones": ["api-gateway"],
+    "serviciosAws": ["aws-cognito", "aws-apigateway"],
+    "serviciosAzure": ["azure-ad-b2c", "azure-apim"],
+    "antipatrones": ["perimeter-only-security"],
+    "motivo": "Usuarios externos requieren IdP administrado y políticas en la API."
+  },
+  {
+    "id": "documentos-objetos",
+    "condicion": { "almacenamientoObjetos": true },
+    "patrones": [],
+    "serviciosAws": ["aws-s3"],
+    "serviciosAzure": ["azure-blob"],
+    "antipatrones": [],
+    "motivo": "Archivos y adjuntos deben ir a almacenamiento de objetos, no a la BD transaccional."
+  },
+  {
+    "id": "microservicios",
+    "condicion": { "estiloMicroservicios": true },
+    "patrones": ["database-per-service", "circuit-breaker", "retry-idempotency"],
+    "serviciosAws": ["aws-eks", "aws-ecs"],
+    "serviciosAzure": ["azure-aks", "azure-container-apps"],
+    "antipatrones": ["distributed-monolith", "premature-microservices"],
+    "motivo": "Microservicios exigen límites de datos, resiliencia e idempotencia."
+  },
+  {
+    "id": "migracion-legado",
+    "condicion": { "sistemaLegado": true },
+    "patrones": ["strangler-fig"],
+    "serviciosAws": ["aws-apigateway"],
+    "serviciosAzure": ["azure-apim"],
+    "antipatrones": ["premature-microservices"],
+    "motivo": "Migración gradual reduce riesgo frente a reemplazo total."
+  },
+  {
+    "id": "alta-disponibilidad",
+    "condicion": { "rtoHorasMenor24": true },
+    "patrones": [],
+    "serviciosAws": ["aws-aurora", "aws-alb"],
+    "serviciosAzure": ["azure-sql", "azure-app-gateway"],
+    "antipatrones": ["single-az", "manual-dr"],
+    "motivo": "RTO exigente requiere multi-AZ, balanceo y DR probado."
+  },
+  {
+    "id": "multired",
+    "condicion": { "multiplesRedes": true },
+    "patrones": ["hub-and-spoke"],
+    "serviciosAws": ["aws-vpc"],
+    "serviciosAzure": ["azure-vnet"],
+    "antipatrones": ["perimeter-only-security"],
+    "motivo": "Varias redes se gobiernan mejor con topología hub-spoke."
+  },
+  {
+    "id": "observabilidad-requerida",
+    "condicion": { "slaOperativo": true },
+    "patrones": [],
+    "serviciosAws": ["aws-cloudwatch", "aws-xray"],
+    "serviciosAzure": ["azure-monitor", "azure-app-insights"],
+    "antipatrones": ["no-observability"],
+    "motivo": "SLA operativo imposible sin métricas, logs y trazas."
+  },
+  {
+    "id": "secreto-gestion",
+    "condicion": { "manejaSecretos": true },
+    "patrones": [],
+    "serviciosAws": ["aws-secretsmanager", "aws-kms"],
+    "serviciosAzure": ["azure-key-vault"],
+    "antipatrones": ["secrets-in-code"],
+    "motivo": "Credenciales deben salir del código y rotarse centralmente."
+  },
+  {
+    "id": "contenedores",
+    "condicion": { "contenedores": true, "estiloMicroservicios": false },
+    "patrones": [],
+    "serviciosAws": ["aws-ecs", "aws-ecs"],
+    "serviciosAzure": ["azure-container-apps"],
+    "antipatrones": [],
+    "motivo": "Cargas en contenedor sin complejidad de K8s pueden usar orquestación ligera administrada."
+  }
+]
