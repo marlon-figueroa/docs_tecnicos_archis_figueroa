@@ -1,6 +1,6 @@
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import { Cloud } from 'lucide-react'
+import { Cloud, Trash2 } from 'lucide-react'
 
 const inputCls = 'input input-bordered w-full min-w-0 focus:input-primary text-base'
 const textareaCls =
@@ -106,21 +106,36 @@ export function StepHeader({
 export function StackPanel({
   title,
   badge,
+  onRemove,
   children,
 }: {
   title: string
   badge?: string
+  onRemove?: () => void
   children: ReactNode
 }) {
   return (
     <div className="card card-border bg-base-200/30 shadow-sm w-full min-w-0">
       <div className="card-body gap-0 p-4 sm:p-5">
         <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-primary/15">
-          <h3 className="font-semibold text-base text-base-content flex items-center gap-2">
+          <h3 className="font-semibold text-base text-base-content flex items-center gap-2 min-w-0">
             <span className="size-1.5 rounded-full bg-primary shrink-0" aria-hidden />
-            {title}
+            <span className="truncate">{title}</span>
           </h3>
-          {badge ? <span className="badge badge-primary badge-outline badge-sm font-mono shrink-0">{badge}</span> : null}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {badge ? <span className="badge badge-primary badge-outline badge-sm font-mono">{badge}</span> : null}
+            {onRemove ? (
+              <button
+                type="button"
+                className="btn btn-ghost btn-xs text-error gap-1"
+                onClick={onRemove}
+                aria-label={`Eliminar ${title}`}
+              >
+                <Trash2 className="size-3.5" aria-hidden />
+                Eliminar
+              </button>
+            ) : null}
+          </div>
         </div>
         <FormStack>{children}</FormStack>
       </div>
@@ -154,10 +169,10 @@ export function ChoiceChip({
   onChange: (v: boolean) => void
 }) {
   return (
-    <label className="flex items-start gap-3 p-3.5 h-full min-h-[3.25rem] rounded-xl border border-base-300 bg-base-100 hover:border-primary/30 cursor-pointer transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+    <label className="flex items-center gap-3 p-3.5 h-full min-h-[3.25rem] rounded-xl border border-base-300 bg-base-100 hover:border-primary/30 cursor-pointer transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5">
       <input
         type="checkbox"
-        className="checkbox checkbox-sm checkbox-primary mt-0.5 shrink-0"
+        className="toggle toggle-primary shrink-0"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
       />
@@ -182,7 +197,7 @@ export function ServiceTile({
   return (
     <label
       className={[
-        'flex gap-3 items-start p-4 h-full min-w-0 rounded-xl border cursor-pointer transition-all',
+        'flex gap-3 items-center p-4 h-full min-w-0 rounded-xl border cursor-pointer transition-all',
         selected ? 'border-primary bg-primary/5 ring-1 ring-primary/20' : 'border-base-300 bg-base-100 hover:border-base-content/20',
         disabled ? 'opacity-40 pointer-events-none' : '',
       ]
@@ -191,7 +206,7 @@ export function ServiceTile({
     >
       <input
         type="checkbox"
-        className="checkbox checkbox-primary checkbox-sm mt-1 shrink-0"
+        className="toggle toggle-primary shrink-0"
         checked={selected}
         disabled={disabled}
         onChange={onToggle}

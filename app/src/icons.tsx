@@ -52,12 +52,12 @@ export const STEP_ICONS: LucideIcon[] = [
   Shield,
   Gauge,
   Blocks,
-  Network,
   Rocket,
   Cloud,
   Puzzle,
   Landmark,
   TriangleAlert,
+  Network,
   BadgeCheck,
 ]
 
@@ -81,13 +81,16 @@ export {
   Sparkles,
 }
 
-type AddButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & { children: ReactNode }
+type AddButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  children: ReactNode
+  size?: 'sm' | 'md'
+}
 
-export function AddButton({ children, className, ...rest }: AddButtonProps) {
+export function AddButton({ children, className, size = 'sm', ...rest }: AddButtonProps) {
   return (
     <button
       type="button"
-      className={['btn btn-outline btn-sm gap-2', className].filter(Boolean).join(' ')}
+      className={['btn btn-outline gap-2', size === 'sm' ? 'btn-sm' : '', className].filter(Boolean).join(' ')}
       {...rest}
     >
       <Plus className="size-4 shrink-0" aria-hidden />

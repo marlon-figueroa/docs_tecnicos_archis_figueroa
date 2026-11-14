@@ -51,12 +51,12 @@ const PASOS = [
   'Restricciones y contexto',
   'Escenarios de calidad',
   'Estrategia y bloques',
-  'Diagrama de arquitectura',
   'Ejecución y despliegue',
   'Nube',
   'Patrones',
   'Well-Architected',
   'Decisiones y riesgos',
+  'Diagrama de arquitectura',
   'Validación y exportación',
 ]
 
@@ -129,6 +129,7 @@ export default function App() {
     return d
   })
   const [sugerenciasPanelOpen, setSugerenciasPanelOpen] = useState(false)
+  const [escenarioAEliminar, setEscenarioAEliminar] = useState<number | null>(null)
   const [exportandoPdf, setExportandoPdf] = useState(false)
 
   const sugerencias = useMemo(() => sugerirParaDocumento(doc), [doc])
@@ -407,11 +408,19 @@ export default function App() {
                   title="Escenarios de calidad"
                   desc="Cada escenario debe tener estímulo, respuesta esperada y medida verificable."
                 />
-                {(doc.arc42.escenariosCalidad?.length
-                  ? doc.arc42.escenariosCalidad
-                  : [{ nombre: '', estimulo: '', respuesta: '', medida: '' }]
-                ).map((esc: { nombre: string; estimulo: string; respuesta: string; medida: string }, idx: number) => (
-                  <StackPanel key={idx} title={`Escenario ${idx + 1}`} badge={`Q${idx + 1}`}>
+                {(doc.arc42.escenariosCalidad || []).length === 0 ? (
+                  <p className="text-sm text-base-content/60 border border-dashed border-base-300 rounded-xl px-4 py-6 text-center">
+                    No hay escenarios. Añade al menos uno con estímulo, respuesta y medida.
+                  </p>
+                ) : null}
+                {(doc.arc42.escenariosCalidad || []).map(
+                  (esc: { nombre: string; estimulo: string; respuesta: string; medida: string }, idx: number) => (
+                  <StackPanel
+                    key={idx}
+                    title={`Escenario ${idx + 1}`}
+                    badge={`Q${idx + 1}`}
+                    onRemove={() => setEscenarioAEliminar(idx)}
+                  >
                     <Field label="Nombre">
                       <TextInput
                         value={esc.nombre}
@@ -440,9 +449,11 @@ export default function App() {
                       />
                     </Field>
                   </StackPanel>
-                ))}
+                )
+                )}
+                <div className="flex justify-end w-full">
                 <AddButton
-                  className="mt-2"
+                  size="md"
                   onClick={() =>
                     patch((d) => {
                       d.arc42.escenariosCalidad = [
@@ -454,6 +465,7 @@ export default function App() {
                 >
                   Añadir escenario
                 </AddButton>
+                </div>
               </FormStack>
             )}
 
@@ -504,11 +516,11 @@ export default function App() {
               </FormStack>
             )}
 
-            {step === 4 && (
+            {step === 9 && (
               <FormStack>
                 <PasoHeader
-                  stepIndex={4}
-                  icon={STEP_ICONS[4]}
+                  stepIndex={9}
+                  icon={STEP_ICONS[9]}
                   title="Diagrama de arquitectura"
                   desc="Vista interactiva C4: actores, contenedores, sistemas externos y servicios de nube del diseño actual."
                 />
@@ -528,11 +540,11 @@ export default function App() {
               </FormStack>
             )}
 
-            {step === 5 && (
+            {step === 4 && (
               <FormStack>
                 <PasoHeader
-                  stepIndex={5}
-                  icon={STEP_ICONS[5]}
+                  stepIndex={4}
+                  icon={STEP_ICONS[4]}
                   title="Ejecución y despliegue"
                   desc="Describe entornos, redes y topología en el proveedor elegido."
                 />
@@ -551,11 +563,11 @@ export default function App() {
               </FormStack>
             )}
 
-            {step === 6 && (
+            {step === 5 && (
               <FormStack>
                 <PasoHeader
-                  stepIndex={6}
-                  icon={STEP_ICONS[6]}
+                  stepIndex={5}
+                  icon={STEP_ICONS[5]}
                   title="Servicios de nube"
                   desc={`Catálogo para ${proveedor.toUpperCase()}. Selecciona los servicios del diseño.`}
                 />
@@ -594,11 +606,11 @@ export default function App() {
               </FormStack>
             )}
 
-            {step === 7 && (
+            {step === 6 && (
               <FormStack>
                 <PasoHeader
-                  stepIndex={7}
-                  icon={STEP_ICONS[7]}
+                  stepIndex={6}
+                  icon={STEP_ICONS[6]}
                   title="Patrones y antipatrones"
                   desc="Marca qué recomendaciones adoptas o qué riesgos arquitectónicos mitigas."
                 />
@@ -648,11 +660,11 @@ export default function App() {
               </FormStack>
             )}
 
-            {step === 8 && (
+            {step === 7 && (
               <FormStack>
                 <PasoHeader
-                  stepIndex={8}
-                  icon={STEP_ICONS[8]}
+                  stepIndex={7}
+                  icon={STEP_ICONS[7]}
                   title="Well-Architected"
                   desc="Línea base de controles por pilar (referencia, no el cuestionario oficial completo)."
                 />
@@ -712,11 +724,11 @@ export default function App() {
               </FormStack>
             )}
 
-            {step === 9 && (
+            {step === 8 && (
               <FormStack>
                 <PasoHeader
-                  stepIndex={9}
-                  icon={STEP_ICONS[9]}
+                  stepIndex={8}
+                  icon={STEP_ICONS[8]}
                   title="ADRs y riesgos"
                   desc="Documenta decisiones y riesgos ligados a brechas de controles."
                 />
@@ -936,6 +948,55 @@ export default function App() {
           </div>
         </aside>
       </div>
+      {escenarioAEliminar !== null ? (
+        <dialog
+          className="modal modal-open"
+          aria-labelledby="confirmar-eliminar-escenario"
+          onCancel={(e) => {
+            e.preventDefault()
+            setEscenarioAEliminar(null)
+          }}
+        >
+          <div className="modal-box">
+            <h3 id="confirmar-eliminar-escenario" className="font-semibold text-lg">
+              Eliminar escenario
+            </h3>
+            <p className="py-3 text-sm text-base-content/75 leading-relaxed">
+              ¿Eliminar{' '}
+              <strong>
+                {doc.arc42.escenariosCalidad?.[escenarioAEliminar]?.nombre?.trim() ||
+                  `Escenario ${escenarioAEliminar + 1}`}
+              </strong>
+              ? Esta acción no se puede deshacer.
+            </p>
+            <div className="modal-action">
+              <button type="button" className="btn" onClick={() => setEscenarioAEliminar(null)}>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn btn-error"
+                onClick={() => {
+                  const idx = escenarioAEliminar
+                  patch((d) => {
+                    d.arc42.escenariosCalidad = (d.arc42.escenariosCalidad || []).filter(
+                      (_: unknown, i: number) => i !== idx
+                    )
+                  })
+                  setEscenarioAEliminar(null)
+                }}
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+          <form method="dialog" className="modal-backdrop">
+            <button type="button" aria-label="Cancelar eliminación" onClick={() => setEscenarioAEliminar(null)}>
+              cerrar
+            </button>
+          </form>
+        </dialog>
+      ) : null}
       <SuggestionsPanel
         open={sugerenciasPanelOpen}
         onClose={() => setSugerenciasPanelOpen(false)}

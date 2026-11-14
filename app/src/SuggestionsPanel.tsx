@@ -143,7 +143,7 @@ export function SuggestionsPanel({
                   <Puzzle className="size-3.5 text-primary" aria-hidden />
                   Patrones ({sugerencias.patrones.length})
                 </h3>
-                <button type="button" className="btn btn-ghost btn-xs" onClick={() => onGoStep(7)}>
+                <button type="button" className="btn btn-ghost btn-xs" onClick={() => onGoStep(6)}>
                   Ver paso
                 </button>
               </div>
@@ -165,7 +165,7 @@ export function SuggestionsPanel({
                   <AlertTriangle className="size-3.5 text-warning" aria-hidden />
                   Antipatrones ({sugerencias.antipatrones.length})
                 </h3>
-                <button type="button" className="btn btn-ghost btn-xs" onClick={() => onGoStep(7)}>
+                <button type="button" className="btn btn-ghost btn-xs" onClick={() => onGoStep(6)}>
                   Ver paso
                 </button>
               </div>
@@ -187,7 +187,7 @@ export function SuggestionsPanel({
                   <Cloud className="size-3.5 text-primary" aria-hidden />
                   Servicios ({sugerencias.servicios.length})
                 </h3>
-                <button type="button" className="btn btn-ghost btn-xs" onClick={() => onGoStep(6)}>
+                <button type="button" className="btn btn-ghost btn-xs" onClick={() => onGoStep(5)}>
                   Ver paso
                 </button>
               </div>
