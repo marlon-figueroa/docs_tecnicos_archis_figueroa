@@ -478,7 +478,7 @@ export default function App() {
     <div className="drawer lg:drawer-open min-h-screen">
       <input id="app-drawer" type="checkbox" className="drawer-toggle" />
       <div className="drawer-content flex flex-col min-h-screen bg-base-200">
-        <header className="navbar bg-base-100 border-b border-base-300 no-print px-4 gap-2">
+        <header className="navbar min-h-24 bg-base-100 border-b border-base-300 no-print px-4 py-3 gap-3">
           <div className="flex-none lg:hidden">
             <label htmlFor="app-drawer" className="btn btn-square btn-ghost drawer-button" aria-label="Menú">
               <Icon icon={Menu} size="lg" />

@@ -86,10 +86,10 @@ function StatCard({
           ? 'border-error/30 bg-error/5'
           : 'border-base-300 bg-base-100'
   return (
-    <article className={`rounded-xl border p-3 shadow-sm ${ring}`}>
-      <p className="text-[10px] font-bold uppercase tracking-wide text-base-content/50">{label}</p>
-      <p className="text-lg font-semibold tabular-nums mt-0.5 leading-tight">{value}</p>
-      {hint ? <p className="text-[11px] text-base-content/55 mt-0.5 leading-snug line-clamp-2">{hint}</p> : null}
+    <article className={`min-w-0 overflow-hidden rounded-xl border p-3 shadow-sm ${ring}`}>
+      <p className="break-words text-[10px] font-bold uppercase leading-tight tracking-normal text-base-content/50">{label}</p>
+      <p className="mt-0.5 break-words text-lg font-semibold leading-tight tabular-nums">{value}</p>
+      {hint ? <p className="mt-0.5 line-clamp-2 break-words text-[11px] leading-snug text-base-content/55">{hint}</p> : null}
     </article>
   )
 }

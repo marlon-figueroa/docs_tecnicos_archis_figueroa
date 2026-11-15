@@ -327,8 +327,10 @@ export async function generateStyledPdfBlob(
         backgroundColor: '#ffffff',
         logging: false,
         useCORS: true,
-        windowWidth: sheet.scrollWidth,
-        windowHeight: sheet.scrollHeight,
+        width: sheet.offsetWidth,
+        height: sheet.offsetHeight,
+        windowWidth: sheet.offsetWidth,
+        windowHeight: sheet.offsetHeight,
       })
       placeImage(pdf, canvas)
     }

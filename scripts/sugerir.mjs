@@ -14,11 +14,12 @@ if (!path) {
 }
 
 const doc = JSON.parse(readFileSync(path, 'utf8'));
-const { documento, sugerencias } = aplicarSugerencias(doc);
+const { documento, sugerencias, aplicado } = aplicarSugerencias(doc);
 
 console.log(JSON.stringify(sugerencias, null, 2));
 
 if (write) {
   writeFileSync(path, JSON.stringify(documento, null, 2), 'utf8');
   console.error('Documento actualizado:', path);
+  console.error('Fusión aplicada:', JSON.stringify(aplicado));
 }

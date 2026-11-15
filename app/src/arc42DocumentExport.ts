@@ -41,6 +41,7 @@ body {
   font-family: 'PT Sans', sans-serif;
   font-size: 11pt;
   line-height: 1.5;
+  letter-spacing: 0.15px;
   color: #000000;
   margin: 0;
   padding: 0;
@@ -368,11 +369,13 @@ html.pdf-capture .dashboard-landscape {
 .pdf-sheet .dashboard-landscape {
   min-height: 100%;
   height: 100%;
+  max-height: 100%;
   width: 100%;
   padding: 0;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+  overflow: hidden;
 }
 .pdf-sheet .dashboard-board {
   flex: 1;
@@ -394,8 +397,66 @@ html.pdf-capture .dashboard-landscape {
   font-variant-numeric: tabular-nums;
 }
 
-.dashboard-landscape {
-  page: landscape;
+.dashboard-landscape h3 {
+  margin: 0.55rem 0 0.42rem;
+  font-size: 10pt;
+  line-height: 1.2;
+}
+
+.dashboard-landscape table.pair {
+  width: 100%;
+  border: none !important;
+  border-collapse: separate;
+  border-spacing: 12px 6px;
+  margin: 0;
+}
+
+.dashboard-landscape table.pair td {
+  border: none !important;
+  background: transparent;
+  vertical-align: top;
+  width: 50%;
+  padding: 0 !important;
+}
+
+.dashboard-landscape table.data {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  margin: 0;
+  font-size: 8pt;
+  line-height: 1.3;
+}
+
+.dashboard-landscape table.data th,
+.dashboard-landscape table.data td {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  vertical-align: middle;
+  padding: 0.32rem 0.4rem 0.18rem;
+  line-height: 1;
+}
+
+.dashboard-landscape table.data .v {
+  display: inline-block;
+  position: relative;
+  top: -0.22em;
+  line-height: 1;
+}
+
+.dashboard-landscape table.data th {
+  text-align: left;
+  background: #f3f3f3;
+  color: #333333;
+  font-weight: 700;
+}
+
+.dashboard-landscape table.data.cols-3 td:nth-child(2),
+.dashboard-landscape table.data.cols-3 th:nth-child(2) {
+  width: 22%;
+  font-weight: 700;
+  color: #c62828;
+  white-space: nowrap;
 }
 
 .dash-header {
@@ -403,12 +464,12 @@ html.pdf-capture .dashboard-landscape {
   flex-wrap: nowrap;
   justify-content: space-between;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.5rem;
   border: 1px solid #e0c4c4;
   background: linear-gradient(90deg, #fdf5f5 0%, #ffffff 55%);
-  padding: 0.45rem 0.7rem;
+  padding: 0.28rem 0.55rem;
   border-radius: 6px;
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.15rem;
   flex-shrink: 0;
 }
 
@@ -422,17 +483,17 @@ html.pdf-capture .dashboard-landscape {
 }
 
 .dash-title {
-  margin: 0.15rem 0 0.2rem;
-  font-size: 13pt;
+  margin: 0.1rem 0 0.2rem;
+  font-size: 12pt;
   color: #000;
   font-family: 'PT Sans', sans-serif;
   font-weight: 700;
-  line-height: 1.35;
+  line-height: 1.2;
   letter-spacing: 0;
 }
 
 .dash-meta {
-  margin: 0;
+  margin: 0 0 0.35rem;
   font-size: 9.5pt;
   line-height: 1.4;
   color: #333;
@@ -470,17 +531,61 @@ html.pdf-capture .dashboard-landscape {
 table.dash-layout {
   width: 100%;
   border-collapse: separate;
-  border-spacing: 8px;
+  border-spacing: 4px 4px;
   table-layout: fixed;
   margin: 0;
 }
 
 table.dash-layout td {
   border: none !important;
-  padding: 0 !important;
+  padding: 2px !important;
   vertical-align: top;
   background: transparent;
   width: 25%;
+  overflow: hidden;
+}
+
+.dash-stat,
+.dash-panel,
+.dash-panel-body,
+.dash-panel-head,
+.dash-badge {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.dash-stat {
+  border: 1px solid rgba(198, 40, 40, 0.28);
+  border-radius: 6px;
+  padding: 0.28rem 0.35rem 0.32rem;
+  background: #fafafa;
+  text-align: center;
+  overflow: hidden;
+}
+
+.dash-stat-label,
+.dash-stat-value,
+.dash-stat-hint,
+.dash-panel-head h3,
+.dash-line,
+.dash-count,
+.dash-mini-list li,
+.dash-vision,
+.dash-badge {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.dash-stat-label {
+  margin: 0;
+  min-height: 2.1em;
+  font-size: 7.5pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  line-height: 1.15;
+  color: #555;
 }
 
 table.dash-panels td {
@@ -491,38 +596,22 @@ table.dash-panels td {
   border: 1px solid #d0d0d0;
   border-radius: 6px;
   background: #fff;
-  overflow: visible;
+  overflow: hidden;
+  height: 100%;
 }
 
 .dash-panel-head {
   background: #f3f3f3;
   border-bottom: 1px solid #d8d8d8;
-  padding: 0.4rem 0.6rem;
-}
-
-.dash-stat {
-  border: 1px solid rgba(198, 40, 40, 0.28);
-  border-radius: 6px;
-  padding: 0.45rem 0.55rem 0.5rem;
-  background: #fafafa;
-  text-align: center;
-}
-
-.dash-stat-label {
-  margin: 0;
-  font-size: 8pt;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0;
-  line-height: 1.35;
-  color: #555;
+  padding: 0.18rem 0.45rem;
+  overflow: hidden;
 }
 
 .dash-stat-value {
-  margin: 0.2rem 0 0;
-  font-size: 16pt;
+  margin: 0.05rem 0 0;
+  font-size: 14pt;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.1;
   letter-spacing: 0;
   color: #c62828;
 }
@@ -537,30 +626,55 @@ table.dash-panels td {
 
 .dash-panel-head h3 {
   margin: 0;
-  font-size: 10pt;
+  font-size: 9pt;
   font-weight: 700;
   color: #c62828;
   font-family: 'PT Sans', sans-serif;
   letter-spacing: 0;
-  line-height: 1.35;
+  line-height: 1.25;
+}
+
+.sp {
+  display: inline-block;
+  width: 0.33em;
+  height: 0.55em;
+  vertical-align: middle;
+  font-size: 0;
+  line-height: 0;
 }
 
 .dash-panel-body {
-  padding: 0.45rem 0.55rem 0.55rem;
-  font-size: 9pt;
-  line-height: 1.5;
+  padding: 0.28rem 0.45rem 0.35rem;
+  font-size: 8pt;
+  line-height: 1.35;
   letter-spacing: 0;
-  word-spacing: 0.02em;
+  word-spacing: normal;
   color: #000;
-  overflow: visible;
 }
 
-.dash-panel-body p { margin: 0.3rem 0; }
+.dash-panel-body p { margin: 0.12rem 0; }
+
+.dash-count,
+.dash-line,
+.dash-more {
+  margin: 0.1rem 0;
+  line-height: 1.35;
+}
+
+.dash-more {
+  color: #666;
+  font-size: 7.5pt;
+}
+
+.dash-line .dash-cap-label {
+  display: inline;
+  margin: 0 0.25rem 0 0;
+}
 
 .dash-vision {
-  margin: 0 0 0.35rem;
-  font-size: 9pt;
-  line-height: 1.5;
+  margin: 0 0 0.15rem;
+  font-size: 8pt;
+  line-height: 1.35;
 }
 
 .dash-muted {
@@ -575,15 +689,15 @@ table.dash-panels td {
 }
 
 .dash-mini-list {
-  margin: 0.3rem 0;
-  padding-left: 1.1rem;
+  margin: 0.1rem 0;
+  padding-left: 0.9rem;
   list-style: disc;
-  line-height: 1.5;
+  line-height: 1.3;
 }
 
 .dash-mini-list li {
-  margin: 0.2rem 0;
-  line-height: 1.5;
+  margin: 0.05rem 0;
+  line-height: 1.3;
 }
 
 .dash-card-list {
