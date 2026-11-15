@@ -76,7 +76,16 @@ function dataTable(headers, rows, extraClass = '') {
   const body = rows.length
     ? `<tbody>${rows.join('')}</tbody>`
     : `<tbody><tr><td colspan="${headers.length}"><span class="v">—</span></td></tr></tbody>`;
-  return `<table class="data ${extraClass}">${head}${body}</table>`;
+  return `<div class="data-frame"><table class="data ${extraClass}">${head}${body}</table></div>`;
+}
+
+/** El margen del título no llega al lienzo; un bloque con alto fijo sí. */
+function titled(title, tableHtml) {
+  return `<div class="dash-block"><h3>${esc(title)}</h3><p class="dash-gap">&nbsp;</p>${tableHtml}</div>`;
+}
+
+function pairRow(left, right) {
+  return `<table class="pair"><tr><td>${left}</td><td>${right}</td></tr></table>`;
 }
 
 function collectDashboardData(doc) {
@@ -245,25 +254,15 @@ export function renderConsolidadoHtml(doc) {
   const riesgos = dataTable(['Tipo', 'Detalle'], riesgoRows);
 
   const tablero = `<section class="dashboard-landscape" aria-label="Tablero de control">
-    <p class="dash-kicker">Tablero de control</p>
-    <h2 class="dash-title">${esc(nombre)}</h2>
-    <p class="dash-meta">${esc(proveedorNombre)} · ${esc(fecha)}${autor ? ` · ${esc(autor)}` : ''} · ${esc(badgeText)}</p>
-    <h3>Indicadores</h3>
-    ${indicadores}
-    <table class="pair">
-      <tr>
-        <td><h3>Alcance</h3>${alcance}</td>
-        <td><h3>Bloques</h3>${bloques}<p class="dash-meta">${esc(d.escenarios.length)} escenarios de calidad</p></td>
-      </tr>
-      <tr>
-        <td><h3>Servicios</h3>${servicios}</td>
-        <td><h3>Patrones</h3>${patrones}</td>
-      </tr>
-      <tr>
-        <td><h3>Well-Architected</h3>${waf}</td>
-        <td><h3>Decisiones y riesgos</h3>${riesgos}</td>
-      </tr>
-    </table>
+    <div class="dash-block">
+      <p class="dash-kicker">TABLERO&nbsp;DE&nbsp;CONTROL</p>
+      <h2 class="dash-title">${esc(nombre)}</h2>
+      <p class="dash-meta">${esc(proveedorNombre)} · ${esc(fecha)}${autor ? ` · ${esc(autor)}` : ''} · ${esc(badgeText)}</p>
+    </div>
+    ${titled('Indicadores', indicadores)}
+    ${pairRow(titled('Alcance', alcance), `${titled('Bloques', bloques)}<p class="dash-meta">${esc(d.escenarios.length)} escenarios de calidad</p>`)}
+    ${pairRow(titled('Servicios', servicios), titled('Patrones', patrones))}
+    ${pairRow(titled('Well-Architected', waf), titled('Decisiones y riesgos', riesgos))}
   </section>`;
 
   return spaceFix(`${portada}${tablero}`);

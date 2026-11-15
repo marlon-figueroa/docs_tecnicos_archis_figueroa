@@ -165,6 +165,119 @@ function splitOversized(el: HTMLElement, maxH: number): HTMLElement[] {
   return [el]
 }
 
+function landscapeInnerWidth() {
+  return `${LANDSCAPE.widthMm - LANDSCAPE.padMm * 2}mm`
+}
+
+function dataBodies(root: ParentNode) {
+  return [...root.querySelectorAll('table.data tbody')] as HTMLTableSectionElement[]
+}
+
+/** Copia el bloque y vacía las filas de datos para ir llenándolo de nuevo. */
+function shellWithoutRows(source: HTMLElement) {
+  const shell = source.cloneNode(true) as HTMLElement
+  for (const body of dataBodies(shell)) body.replaceChildren()
+  return shell
+}
+
+function rowGroups(source: HTMLElement) {
+  return dataBodies(source).map((body) => [...body.rows])
+}
+
+/**
+ * Parte un bloque en trozos que caben en una hoja.
+ * Cada trozo conserva el título y el encabezado de la tabla.
+ */
+function splitTallBlock(source: HTMLElement, maxH: number): HTMLElement[] {
+  if (blockHeight(source) <= maxH) return [source]
+  const groups = rowGroups(source)
+  const total = groups.reduce((sum, rows) => sum + rows.length, 0)
+  if (total <= 1) return [source]
+
+  const parent = source.parentElement
+  if (!parent) return [source]
+  const pieces: HTMLElement[] = []
+  let cursor = 0
+  const longest = Math.max(...groups.map((rows) => rows.length))
+
+  while (cursor < longest) {
+    const shell = shellWithoutRows(source)
+    parent.insertBefore(shell, source)
+    const bodies = dataBodies(shell)
+    let taken = 0
+    let step = cursor
+    while (step < longest) {
+      groups.forEach((rows, index) => {
+        const row = rows[step]
+        if (row) bodies[index]?.appendChild(row)
+      })
+      taken += 1
+      step += 1
+      if (blockHeight(shell) > maxH && taken > 1) {
+        groups.forEach((rows, index) => {
+          const row = rows[step - 1]
+          if (row && row.parentElement === bodies[index]) bodies[index].removeChild(row)
+        })
+        step -= 1
+        break
+      }
+    }
+    if (step === cursor) {
+      groups.forEach((rows, index) => {
+        const row = rows[cursor]
+        if (row) bodies[index]?.appendChild(row)
+      })
+      step = cursor + 1
+    }
+    if (pieces.length > 0) {
+      for (const extra of shell.querySelectorAll('.dash-meta')) extra.remove()
+    }
+    pieces.push(shell)
+    cursor = step
+  }
+
+  source.remove()
+  return pieces.length ? pieces : [source]
+}
+
+function breakDashboard(section: HTMLElement, limit: number) {
+  section.style.width = landscapeInnerWidth()
+  section.style.maxWidth = 'none'
+  const blocks = [...section.children].filter(isElement)
+  const pieces: HTMLElement[] = []
+  for (const block of blocks) {
+    pieces.push(...splitTallBlock(block, limit))
+  }
+  return pieces
+}
+
+function flowDashboard(doc: Document, section: HTMLElement, sheets: HTMLElement[]) {
+  const limit = Math.max(120, contentLimit(doc, 'landscape') - 12)
+  const pieces = breakDashboard(section, limit)
+  let bucket: HTMLElement[] = []
+  let used = 0
+
+  const flush = () => {
+    if (!bucket.length) return
+    const page = doc.createElement('div')
+    page.className = 'dashboard-landscape'
+    for (const node of bucket) page.appendChild(node)
+    sheets.push(mountSheet(doc, [page], 'landscape'))
+    bucket = []
+    used = 0
+  }
+
+  for (const piece of pieces) {
+    const height = blockHeight(piece)
+    if (bucket.length && used + height > limit) flush()
+    bucket.push(piece)
+    used += height
+    if (used > limit) flush()
+  }
+  flush()
+  section.remove()
+}
+
 function mountSheet(doc: Document, nodes: HTMLElement[], orientation: Orientation) {
   const spec = pageSpec(orientation)
   const sheet = doc.createElement('section')
@@ -200,16 +313,15 @@ function paginate(doc: Document, root: HTMLElement) {
   }
 
   for (const node of flow) {
-    if (
-      node.classList.contains('cover') ||
-      node.classList.contains('diagram-page') ||
-      node.classList.contains('dashboard-landscape')
-    ) {
+    if (node.classList.contains('dashboard-landscape')) {
       flush()
-      const next =
-        node.classList.contains('diagram-page') || node.classList.contains('dashboard-landscape')
-          ? 'landscape'
-          : 'portrait'
+      flowDashboard(doc, node, sheets)
+      continue
+    }
+
+    if (node.classList.contains('cover') || node.classList.contains('diagram-page')) {
+      flush()
+      const next = node.classList.contains('diagram-page') ? 'landscape' : 'portrait'
       sheets.push(mountSheet(doc, [node], next))
       continue
     }

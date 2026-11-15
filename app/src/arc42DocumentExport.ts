@@ -367,15 +367,13 @@ html.pdf-capture .dashboard-landscape {
   display: flex;
 }
 .pdf-sheet .dashboard-landscape {
-  min-height: 100%;
-  height: 100%;
-  max-height: 100%;
   width: 100%;
   padding: 0;
-  display: flex;
-  flex-direction: column;
   box-sizing: border-box;
-  overflow: hidden;
+  height: auto;
+  max-height: none;
+  min-height: 0;
+  overflow: visible;
 }
 .pdf-sheet .dashboard-board {
   flex: 1;
@@ -398,50 +396,111 @@ html.pdf-capture .dashboard-landscape {
 }
 
 .dashboard-landscape h3 {
-  margin: 0.55rem 0 0.42rem;
+  margin: 0;
+  padding: 8px 0 0;
   font-size: 10pt;
-  line-height: 1.2;
+  line-height: 1.25;
+}
+
+.dashboard-landscape .dash-gap {
+  display: block;
+  height: 8px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  line-height: 8px;
+  font-size: 8px;
+  color: transparent;
+}
+
+.dashboard-landscape .dash-block {
+  margin: 0;
+  padding: 0;
 }
 
 .dashboard-landscape table.pair {
   width: 100%;
   border: none !important;
-  border-collapse: separate;
-  border-spacing: 12px 6px;
+  border-collapse: collapse;
+  border-spacing: 0;
   margin: 0;
 }
 
-.dashboard-landscape table.pair td {
+.dashboard-landscape table.pair > tbody > tr > td {
   border: none !important;
   background: transparent;
   vertical-align: top;
   width: 50%;
   padding: 0 !important;
+  text-align: left;
+}
+
+.dashboard-landscape table.pair > tbody > tr > td + td {
+  padding-left: 14px !important;
+}
+
+.dashboard-landscape .data-frame {
+  border: 1px solid #000;
+  border-radius: 6px;
+  overflow: hidden;
 }
 
 .dashboard-landscape table.data {
   width: 100%;
   table-layout: fixed;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: none;
   margin: 0;
   font-size: 8pt;
   line-height: 1.3;
+  border-radius: 6px;
 }
 
 .dashboard-landscape table.data th,
 .dashboard-landscape table.data td {
+  border: none;
+  border-right: 1px solid #000;
+  border-bottom: 1px solid #000;
   overflow-wrap: anywhere;
   word-break: break-word;
   vertical-align: middle;
-  padding: 0.32rem 0.4rem 0.18rem;
-  line-height: 1;
+  text-align: left;
+  padding: 6px 8px 6px 8px;
+  line-height: 1.35;
+}
+
+.dashboard-landscape table.data th:last-child,
+.dashboard-landscape table.data td:last-child {
+  border-right: none;
+}
+
+.dashboard-landscape table.data tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.dashboard-landscape table.data thead tr:first-child th:first-child {
+  border-top-left-radius: 6px;
+}
+
+.dashboard-landscape table.data thead tr:first-child th:last-child {
+  border-top-right-radius: 6px;
+}
+
+.dashboard-landscape table.data tbody tr:last-child td:first-child {
+  border-bottom-left-radius: 6px;
+}
+
+.dashboard-landscape table.data tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 6px;
 }
 
 .dashboard-landscape table.data .v {
   display: inline-block;
   position: relative;
-  top: -0.22em;
-  line-height: 1;
+  top: -1px;
+  line-height: 1.35;
+  padding-left: 3px;
 }
 
 .dashboard-landscape table.data th {
@@ -477,8 +536,9 @@ html.pdf-capture .dashboard-landscape {
   margin: 0 0 0.15rem;
   font-size: 8pt;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0;
+  text-transform: none;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
   color: #c62828;
 }
 
